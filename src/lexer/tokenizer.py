@@ -13,8 +13,8 @@ class Token:
     
     def __repr__(self):
         if self.value is not None:
-            return f"Token({self.type}, '{self.lexeme}', {self.value})"
-        return f"Token({self.type}, '{self.lexeme}')"
+            return f"{self.type}, '{self.lexeme}', {self.value})"
+        return f"{self.type}, '{self.lexeme}')"
 
 class LexicalAnalyzer:
     # tokenizes LOLCODE by matching regex patterns
@@ -50,6 +50,43 @@ class LexicalAnalyzer:
         
         return tokens, errors
     
+    def nameType (self, token_type):
+        if token_type in ("HAI", "KTHXBYE"):
+            return "Code Delimiter"
+        elif token_type == "WAZZUP":
+            return "Variable List Delimiter"
+        elif token_type == "BUHBYE":
+            return "Variable List Terminator"
+        elif token_type == "I HAS A":
+            return "Variable Declaration"
+        elif token_type == "IDENTIFIER":
+            return "Variable Identifier"
+        elif token_type == "ITZ":
+            return "Variable Assignment (following I HAS A)"
+        elif token_type == "NUMBR Literal":
+            return "Integer Literal"
+        elif token_type == "NUMBAR Literal":
+            return "Float Literal"
+        elif token_type == "YARN Literal":
+            return "String Literal"
+        elif token_type == "TROOF Literal":
+            return "Boolean Value (True/False)"
+        elif token_type in ("SUM OF", "DIFF OF", "PRODUKT OF", "QUOSHUNT OF", "MOD OF"):
+            return "Arithmetic Operator"
+        elif token_type in ("BIGGR OF", "SMALLR OF"):
+            return "Comparison Operator"
+        elif token_type == "VISIBLE":
+            return "Output Keyword"
+        elif token_type == "AN":
+            return "Conjunction"
+        elif token_type == "BTW":
+            return "Comment Keyword"
+        elif token_type == '"':
+            return "String Delimiter"
+        else:
+            # fallback for any unclassified tokens
+            return token_type
+    
     def _make(self, token_type, lexeme, line):
         # creates a token and converts literals to their actual values
         value = None
@@ -62,5 +99,6 @@ class LexicalAnalyzer:
             value = lexeme[1:-1]  # remove quotes
         elif token_type == 'TROOF Literal':
             value = (lexeme == 'WIN')
-        
-        return Token(token_type, lexeme, value, line)
+
+        types = self.nameType(token_type)
+        return Token(types, lexeme, value, line)
