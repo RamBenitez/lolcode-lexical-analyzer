@@ -2,12 +2,13 @@ import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
 import os
+from interpreter_screen import InterpreterScreen
 
 class LandingPage:
     def __init__(self, root):
         self.root = root
         self.root.title("LOLCode Interpreter - Landing Page")
-        self.root.geometry("1000x700")
+        self.root.geometry("1200x800")
         self.root.configure(bg="#8cbcff")
 
         logo_path = os.path.join("assets", "logo1.png")
@@ -52,5 +53,11 @@ class LandingPage:
     def on_start_click(self):
         #starting when  clicked
         self.start_button.config(text="Starting...")
-        self.root.after(1000, lambda: self.start_button.config(text="Start"))  # revert after 1 sec
+        self.root.after(1000, self.open_main_screen) 
 
+    def open_main_screen(self):
+        """Destroy landing page and open main interpreter screen"""
+        self.root.destroy()  # Close landing page
+        new_root = tk.Tk()   # Create new window
+        InterpreterScreen(new_root)  # Initialize interpreter GUI
+        new_root.mainloop()
