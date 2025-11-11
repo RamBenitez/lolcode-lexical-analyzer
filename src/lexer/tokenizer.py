@@ -1,10 +1,9 @@
 # main lexical analysis algorithm reads code line by line and matches regex patterns
 import re
-from lexer.token_types import TOKEN_SPECIFICATION
+from .token_types import TOKEN_SPECIFICATION 
 from utils.file_reader import readLines
 
 class Token:
-    # single token with its type, lexeme, value, and line number.
     def __init__(self, type, lexeme, value=None, line=0):
         self.type = type
         self.lexeme = lexeme
@@ -13,8 +12,8 @@ class Token:
     
     def __repr__(self):
         if self.value is not None:
-            return f"{self.type}, '{self.lexeme}', {self.value})"
-        return f"{self.type}, '{self.lexeme}')"
+            return f"Token({self.type}, '{self.lexeme}', {self.value})"
+        return f"Token({self.type}, '{self.lexeme}')"
 
 class LexicalAnalyzer:
     # tokenizes LOLCODE by matching regex patterns
@@ -47,10 +46,13 @@ class LexicalAnalyzer:
                 else:
                     errors.append(f"Error at line {line_num}, pos {pos}: '{line[pos]}'")
                     pos += 1
-        
+            
+            #Allows parser to recognize linebreaks 
+            tokens.append(Token(type='LINEBREAK', lexeme='\\n', value=None, line=line_num))
+            
         return tokens, errors
     
-    def nameType (self, token_type):
+    def nameType(self, token_type):
         if token_type in ("HAI", "KTHXBYE"):
             return "Code Delimiter"
         elif token_type == "WAZZUP":
@@ -83,8 +85,10 @@ class LexicalAnalyzer:
             return "Comment Keyword"
         elif token_type == '"':
             return "String Delimiter"
+        elif token_type == "LINEBREAK":
+            return "Linebreak"
         else:
-            # fallback for any unclassified tokens
+            # Fallback for any unclassified tokens
             return token_type
     
     def _make(self, token_type, lexeme, line):
@@ -96,9 +100,8 @@ class LexicalAnalyzer:
         elif token_type == 'NUMBAR Literal':
             value = float(lexeme)
         elif token_type == 'YARN Literal':
-            value = lexeme[1:-1]  # remove quotes
+            value = lexeme[1:-1]  # Remove quotes
         elif token_type == 'TROOF Literal':
             value = (lexeme == 'WIN')
 
-        types = self.nameType(token_type)
-        return Token(types, lexeme, value, line)
+        return Token(token_type, lexeme, value, line)
