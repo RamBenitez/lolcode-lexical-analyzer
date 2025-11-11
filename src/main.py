@@ -2,6 +2,7 @@
 
 from lexer.tokenizer import LexicalAnalyzer
 from utils.file_reader import readLines
+from parser.parser import Parser 
 
 
 def main():
@@ -20,16 +21,28 @@ def main():
         # print tokens in a table
         print(f"{'LINE':<6} {'TYPE':<20} {'LEXEME':<15} {'VALUE'}")
         print("-" * 60)
-        
+
         for token in tokens:
-            value = token.value if token.value is not None else ""
-            print(f"{token.line:<6} {token.type:<20} {token.lexeme:<15} {value}")
+            display_type = analyzer.nameType(token.type)
+            print(f"{token.line:<6} {display_type:<40} {token.lexeme:<20}")
         
         if errors:
             print("\nErrors found:")
             for error in errors:
                 print(f"  {error}")
-        
+    
+        #parser function - parse the tokens and prints the Abstract Syntax Tree
+        try:
+            token_dicts = [{'type': t.type, 'value': t.lexeme} for t in tokens]
+            parser = Parser(token_dicts)
+            ast = parser.parse()
+            
+            print("\nAbstract Syntax Tree")
+            print(ast) 
+
+        except SyntaxError as e:
+            print(f"Error: {e}")
+
     except FileNotFoundError:
         print(f"Error: Could not find '{file_path}'")
     except Exception as e:
