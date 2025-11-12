@@ -1,5 +1,4 @@
 import tkinter as tk
-from tkinter import ttk
 from PIL import Image, ImageTk
 import os
 from interpreter_screen import InterpreterScreen
@@ -23,32 +22,21 @@ class LandingPage:
         )
         logo_label.pack(pady=40)
 
-        #Style for the button
-        style = ttk.Style()
-        style.configure(
-            "Blue.TButton",
-            font=("Helvetica", 16, "bold"),
-            padding=15,
-            background="#0078D7",  # blue
-            foreground="white",
-            borderwidth=0,
-            focusthickness=3,
-            focuscolor="none"
-        )
-        #for hover effect
-        style.map(
-            "Blue.TButton",
-            background=[("active", "#005A9E")],  # darker blue when hovered
-            foreground=[("active", "white")]
-        )
-        #start button
-        self.start_button = ttk.Button(
+        #start button - using standard tk.Button for better cross-platform appearance
+        self.start_button = tk.Button(
             root,
             text="Start",
-            style="Blue.TButton",
+            font=("Helvetica", 16, "bold"),
+            bg="#0078D7",  # blue background
+            fg="white",  # white text
+            activebackground="#005A9E",  # darker blue when clicked
+            activeforeground="white",
+            relief=tk.RAISED,
+            borderwidth=3,
+            cursor="hand2",
             command=self.on_start_click
         )
-        self.start_button.pack(pady=50, ipadx=20, ipady=10)
+        self.start_button.pack(pady=50, ipadx=40, ipady=15)
 
     def on_start_click(self):
         #starting when  clicked

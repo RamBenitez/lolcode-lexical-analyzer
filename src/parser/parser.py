@@ -42,12 +42,24 @@ class Parser:
     # parses the program
     def parse_program(self):
         program_node = Node('program')
+        
+        # Skip any leading linebreaks (from comments or blank lines before HAI)
+        while self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+            self.advance()
+        
         self.match('HAI')
         self.match('LINEBREAK')
         if self.current_token() and self.current_token()['type'] == 'WAZZUP':
             program_node.add_child(self.parse_variable_declaration_block())
         while self.current_token() and self.current_token()['type'] != 'KTHXBYE':
-            program_node.add_child(self.parse_statement())
+            # Skip extra linebreaks (from comments or blank lines)
+            if self.current_token()['type'] == 'LINEBREAK':
+                self.advance()
+                continue
+            
+            stmt = self.parse_statement()
+            if stmt:
+                program_node.add_child(stmt)
             self.match('LINEBREAK')
         self.match('KTHXBYE')
         return program_node
@@ -58,9 +70,17 @@ class Parser:
         self.match('WAZZUP')
         self.match('LINEBREAK')
         while self.current_token() and self.current_token()['type'] != 'BUHBYE':
+            # Skip any extra linebreaks (from comments or blank lines)
+            if self.current_token()['type'] == 'LINEBREAK':
+                self.advance()
+                continue
+            
             if self.current_token()['type'] == 'I HAS A':
                  block_node.add_child(self.parse_variable_declaration())
                  self.match('LINEBREAK')
+            else:
+                # Unknown token in variable declaration block - skip it
+                self.advance()
         self.match('BUHBYE')
         self.match('LINEBREAK')
         return block_node
@@ -69,6 +89,8 @@ class Parser:
         token_type = self.current_token()['type']
         if token_type == 'VISIBLE':
             return self.parse_print_statement()
+        elif token_type == 'I HAS A':
+            return self.parse_variable_declaration()
         elif token_type == 'IDENTIFIER':
             return self.parse_assignment()
 
@@ -100,12 +122,22 @@ class Parser:
     def parse_print_statement(self):
         self.match('VISIBLE')
         node = Node('print_statement')
-        expr_node = self.parse_expression()
-        node.add_child(expr_node)
+        # VISIBLE can have multiple expressions separated by spaces or AN
+        while self.current_token() and self.current_token()['type'] != 'LINEBREAK':
+            expr_node = self.parse_expression()
+            if expr_node:  # Only add if expression was successfully parsed
+                node.add_child(expr_node)
+            # Check if there's an AN separator or just continue with next expression
+            if self.current_token() and self.current_token()['type'] == 'AN':
+                self.advance()  # Skip the AN
+            elif self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+                break  # Stop at linebreak
         return node
         
     def parse_expression(self):
         token = self.current_token()
+        if not token or token['type'] == 'LINEBREAK':
+            return None
         operation_types = ['SUM OF', 'DIFF OF', 'PRODUKT OF', 'QUOSHUNT OF', 'MOD OF', 'BIGGR OF', 'SMALLR OF', 'BOTH SAEM', 'DIFFRINT']
         if token['type'] in operation_types:
             return self.parse_binary_operation()

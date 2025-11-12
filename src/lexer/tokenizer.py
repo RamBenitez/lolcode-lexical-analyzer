@@ -40,6 +40,11 @@ class LexicalAnalyzer:
                 
                 if best:
                     lexeme = best.group(0)
+                    
+                    # If we encounter BTW, it's a single-line comment - skip rest of line
+                    if best_type == 'BTW':
+                        break  # Stop processing this line
+                    
                     if best_type != 'WHITESPACE':
                         tokens.append(self._make(best_type, lexeme, line_num))
                     pos = best.end()
@@ -64,7 +69,7 @@ class LexicalAnalyzer:
         elif token_type == "IDENTIFIER":
             return "Variable Identifier"
         elif token_type == "ITZ":
-            return "Variable Assignment (following I HAS A)"
+            return "Variable Assignment"
         elif token_type == "NUMBR Literal":
             return "Integer Literal"
         elif token_type == "NUMBAR Literal":
