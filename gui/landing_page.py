@@ -44,8 +44,7 @@ class LandingPage:
         self.root.after(1000, self.open_main_screen) 
 
     def open_main_screen(self):
-        """Destroy landing page and open main interpreter screen"""
-        self.root.destroy()  # Close landing page
-        new_root = tk.Tk()   # Create new window
-        InterpreterScreen(new_root)  # Initialize interpreter GUI
+        self.root.destroy()  # close landing page
+        new_root = tk.Tk()   # create new window
+        InterpreterScreen(new_root)  # initialize interpreter GUI
         new_root.mainloop()
