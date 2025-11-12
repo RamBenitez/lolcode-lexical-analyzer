@@ -2,6 +2,12 @@
 
 A full-featured LOLCODE interpreter with lexical analysis, syntax parsing, and semantic execution.
 
+## A Project for CMSC 124 ST-2L
+
+**Team Members:**
+- BENITEZ, Ramil						   
+- RAMOS, John Miles
+- VILLA, Charles Henrico
 ## Setup
 
 1. **Clone the repository:**
@@ -40,3 +46,4 @@ A full-featured LOLCODE interpreter with lexical analysis, syntax parsing, and s
    ```
 
 ## Example Output
+<img width="1502" height="1179" alt="python_KjitpncpqF" src="https://github.com/user-attachments/assets/1a3cfbd0-daae-446b-a71b-4fffd5a79ec3" />
