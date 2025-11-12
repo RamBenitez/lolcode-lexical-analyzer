@@ -1,0 +1,4 @@
+# LOLCODE Interpreter Dependencies
+
+# For GUI image handling
+Pillow>=10.0.0
