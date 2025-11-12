@@ -43,7 +43,7 @@ def main():
         print("=" * 60)
         print(ast)
         
-        # Semantic Analysis & Execution
+        # Semantics
         interpreter = Interpreter(ast, parser.symbol_table)
         output = interpreter.execute()
         
@@ -57,7 +57,6 @@ def main():
             print(f"{var:<20} {str(value):<30}")
         print()
         
-        # Display Execution Output
         print("=" * 60)
         print("EXECUTION OUTPUT")
         print("=" * 60)
