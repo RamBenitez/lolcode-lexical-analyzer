@@ -37,11 +37,11 @@ def main():
         parser = Parser(token_dicts)
         ast = parser.parse()
         
-        # Display Parse Tree
+        # Output in GUI
         print("=" * 60)
-        print("PARSE TREE")
+        print("EXECUTION OUTPUT")
         print("=" * 60)
-        print(ast)
+        interpreter.execute()
         
         # Semantics
         interpreter = Interpreter(ast, parser.symbol_table)
@@ -57,11 +57,6 @@ def main():
             print(f"{var:<20} {str(value):<30}")
         print()
         
-        print("=" * 60)
-        print("EXECUTION OUTPUT")
-        print("=" * 60)
-        for line in output:
-            print(line)
 
     except SyntaxError as e:
         print(f"Syntax Error: {e}")

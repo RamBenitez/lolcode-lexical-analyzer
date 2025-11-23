@@ -8,23 +8,26 @@ class Interpreter:
         self.ast = ast
         self.symbol_table = symbol_table
         self.output = []  # store VISIBLE output
-        self.input_buffer = []  # for GIMMEH 
+        self.input_buffer = [] # for GIMMEH 
+        self.execution_pointer = 0
         
         # create the implicit IT variable
         if "IT" not in self.symbol_table.symbols:
             self.symbol_table.symbols["IT"] = None
     
     def execute(self):
-        # execute the entire program
-        if self.ast.type != 'program':
-            raise RuntimeError("AST root must be a program node")
+            if self.ast.type != 'program':
+                raise RuntimeError("AST root must be a program node")
+            executable_nodes = self.ast.children
+            while self.execution_pointer < len(executable_nodes):
+                node = executable_nodes[self.execution_pointer]
+                result = self.execute_node(node)
+                if isinstance(result, dict) and result.get('status') == 'awaiting_input':
+                    return result
 
-        # execute all statements in the program
-        for child in self.ast.children:
-            self.execute_node(child)
+                self.execution_pointer += 1
+            return {'status': 'completed', 'output': self.output}
         
-        return self.output
-    
     def execute_node(self, node):
         # execute a single AST node
         if node is None:
@@ -69,6 +72,15 @@ class Interpreter:
             # store result in IT
             self.symbol_table.symbols["IT"] = output_line
             return None
+        
+        #Added for User Input GIMMEH
+        elif node_type == 'input_statement':
+            if not self.input_buffer:
+                return {'status': 'awaiting_input', 'variable': node.value}
+            user_input = self.input_buffer.pop(0)
+            var_name = node.value
+            self.symbol_table.symbols[var_name] = user_input
+            return None 
         
         else:
             # for other node types, try to evaluate as expression
