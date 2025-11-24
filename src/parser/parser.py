@@ -95,7 +95,77 @@ class Parser:
             return self.parse_assignment()
         elif token_type == 'O RLY?':
             return self.parse_orly()
+        elif token_type == 'WTF?':
+            return self.parse_switch()
     
+    def parse_switch(self):
+        #math wtf?
+        self.match('WTF?')
+        node = Node ('switch_statement')
+
+        #parse cases
+        while self.current_token() and self.current_token()['type'] != 'OIC':
+            tok = self.current_token()['type']
+
+            # OMG <literal>
+            if tok == 'OMG':
+                node.add_child(self.parse_switch_case())
+            
+            # OMGWTF (default case)
+            elif tok == 'OMGWTF':
+                node.add_child(self.parse_default_case())
+
+            # Skip blank lines
+            elif tok == 'LINEBREAK':
+                self.advance()
+            else:
+                raise SyntaxError(f"Unexpected token in switch: {tok}")
+
+        # END OF SWITCH
+        self.match('OIC')
+        return node
+    
+    def parse_switch_case(self):
+        self.match('OMG')
+        case_value = self.parse_literal()  # literal only
+        case_node = Node('case', value=case_value.value)
+
+        # Parse the case block
+        while self.current_token() and self.current_token()['type'] not in ('OMG', 'OMGWTF', 'OIC'):
+            if self.current_token()['type'] == 'GTFO':
+                self.match('GTFO')
+                case_node.add_child(Node('break'))
+                break
+            
+            stmt = self.parse_statement()
+            if stmt:
+                case_node.add_child(stmt)
+
+            if self.current_token()['type'] == 'LINEBREAK':
+                self.advance()
+
+        return case_node
+
+    def parse_default_case(self):
+        self.match('OMGWTF')
+        default_node = Node('default_case')
+
+        while self.current_token() and self.current_token()['type'] not in ('OIC',):
+            if self.current_token()['type'] == 'GTFO':
+                self.match('GTFO')
+                default_node.add_child(Node('break'))
+                break
+
+            stmt = self.parse_statement()
+            if stmt:
+                default_node.add_child(stmt)
+
+            if self.current_token()['type'] == 'LINEBREAK':
+                self.advance()
+
+        return default_node
+
+
     def parse_orly(self):
         # O RLY? node
         self.match('O RLY?')
