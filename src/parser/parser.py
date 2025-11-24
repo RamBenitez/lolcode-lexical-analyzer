@@ -95,6 +95,39 @@ class Parser:
             return self.parse_variable_declaration()
         elif token_type == 'IDENTIFIER':
             return self.parse_assignment()
+        elif token_type == 'O RLY?':
+            return self.parse_orly()
+    
+    def parse_orly(self):
+        # O RLY? node
+        self.match('O RLY?')
+        node = Node('orly_statement')
+
+        # YA RLY block 
+        self.match('YA RLY')
+        ya_node = Node('ya_rly')
+        while self.current_token() and self.current_token()['type'] not in ('MEBBE', 'NO WAI', 'OIC'):
+            stmt = self.parse_statement()
+            if stmt:
+                ya_node.add_child(stmt)
+            if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+                self.advance()
+        node.add_child(ya_node)
+
+        # NO WAI block
+        if self.current_token() and self.current_token()['type'] == 'NO WAI':
+            self.advance()
+            nowai_node = Node('no_wai')
+            while self.current_token() and self.current_token()['type'] != 'OIC':
+                stmt = self.parse_statement()
+                if stmt:
+                    nowai_node.add_child(stmt)
+                if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+                    self.advance()
+            node.add_child(nowai_node)
+
+        self.match('OIC')
+        return node
 
     def parse_variable_declaration(self):
         self.match('I HAS A')

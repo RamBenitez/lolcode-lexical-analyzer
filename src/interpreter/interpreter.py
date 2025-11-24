@@ -72,6 +72,25 @@ class Interpreter:
             # store result in IT
             self.symbol_table.symbols["IT"] = output_line
             return None
+    
+        #O RLY? / YA RLY / NO WAI
+        elif node_type == 'orly_statement':
+            # IT should already hold the condition
+            it_value = self.symbol_table.symbols.get("IT", None)
+            if self.to_troof(it_value):
+                # Execute YA RLY block
+                for child in node.children:
+                    if child.type == 'ya_rly':
+                        for stmt in child.children:
+                            self.execute_node(stmt)
+                        break
+            else:
+                # Execute NO WAI block if exists
+                for child in node.children:
+                    if child.type == 'no_wai':
+                        for stmt in child.children:
+                            self.execute_node(stmt)
+                        break
         
         #Added for User Input GIMMEH
         elif node_type == 'input_statement':
@@ -253,6 +272,6 @@ class Interpreter:
             return value != 0
         
         if isinstance(value, str):
-            return value != ""
+            return value.upper() == "WIN"
         
         return True
