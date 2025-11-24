@@ -72,6 +72,37 @@ class Interpreter:
             # store result in IT
             self.symbol_table.symbols["IT"] = output_line
             return None
+
+        elif node_type == 'switch_statement':
+            it_value = self.symbol_table.symbols.get("IT")
+
+            case_executed = False
+            breaking = False
+
+            for child in node.children:
+                if child.type == 'case':
+                    # literal in case
+                    case_literal = self.evaluate_expression(child.children[0])
+
+                    if not case_executed and case_literal == it_value:
+                        # execute this block
+                        for stmt in child.children[1:]:
+                            if stmt.type == "break":
+                                breaking = True
+                                break
+                            self.execute_node(stmt)
+                        case_executed = True
+                    
+                    if breaking:
+                        break
+
+                elif child.type == 'default_case' and not case_executed:
+                    for stmt in child.children:
+                        self.execute_node(stmt)
+                    break
+
+            return None
+
     
         #O RLY? / YA RLY / NO WAI
         elif node_type == 'orly_statement':
