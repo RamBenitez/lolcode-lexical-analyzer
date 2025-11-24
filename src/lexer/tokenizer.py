@@ -92,6 +92,8 @@ class LexicalAnalyzer:
             return "String Delimiter"
         elif token_type == "LINEBREAK":
             return "Linebreak"
+        elif token_type in ("O RLY?", "YA RLY", "NO WAI", "OIC"):
+            return "If-Then Statement"
         else:
             # Fallback for any unclassified tokens
             return token_type
