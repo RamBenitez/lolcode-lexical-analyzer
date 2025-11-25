@@ -162,9 +162,16 @@ class Interpreter:
         # Variable reference
         elif node_type == 'variable':
             var_name = node.value
+            # check local scope
             if var_name not in self.symbol_table.symbols:
+                value = self.symbol_table.symbols[var_name]
+            # check parent scope 
+            elif hasattr(self, "local_parent") and var_name in self.local_parent:
+                value = self.local_parent[var_name]
+            # not found anywhere
+            else:
                 raise RuntimeError(f"Variable '{var_name}' not declared")
-            value = self.symbol_table.symbols[var_name]
+                
             # Store in IT
             self.symbol_table.symbols["IT"] = value
             return value
