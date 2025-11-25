@@ -126,12 +126,15 @@ class Interpreter:
         elif node_type == 'function_def':
             self.functions[node.value] = node
             return None
+
         elif node_type == 'function_call':
             return self.execute_function_call(node)
+
         elif node_type == 'return':
             value = self.evaluate_expression(node.children[0])
             return {"return": True, "value": value}
-        elif node_type == 'break':  # GTFO OUTSIDE SWITCH = return NOOB
+
+        elif node_type == 'break':  #gtfo outside switch 
             return "return_noob"
         else:
             # for other node types, try to evaluate as expression
@@ -164,14 +167,8 @@ class Interpreter:
             var_name = node.value
             # check local scope
             if var_name not in self.symbol_table.symbols:
-                value = self.symbol_table.symbols[var_name]
-            # check parent scope 
-            elif hasattr(self, "local_parent") and var_name in self.local_parent:
-                value = self.local_parent[var_name]
-            # not found anywhere
-            else:
                 raise RuntimeError(f"Variable '{var_name}' not declared")
-                
+            value = self.symbol_table.symbols[var_name]
             # Store in IT
             self.symbol_table.symbols["IT"] = value
             return value
@@ -334,7 +331,6 @@ class Interpreter:
         old_symbols = self.symbol_table.symbols.copy()
         # local scope with parent reference
         self.symbol_table.symbols = {}
-        self.local_parent = old_symbols
 
         # Assign parameters
         for param, val in zip(func_def.params, args):
