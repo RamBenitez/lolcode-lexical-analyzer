@@ -323,9 +323,11 @@ class Interpreter:
         if len(args) != len(func_def.params):
             raise RuntimeError(f"Function '{func_name}' expects {len(func_def.params)} args, got {len(args)}")
 
-        # Create new local scope (NEW symbol table)
+        #create new local scope new sym table
         old_symbols = self.symbol_table.symbols.copy()
+        # local scope with parent reference
         self.symbol_table.symbols = {}
+        self.local_parent = old_symbols
 
         # Assign parameters
         for param, val in zip(func_def.params, args):
