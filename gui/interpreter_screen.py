@@ -18,6 +18,8 @@ class InterpreterScreen:
         self.root.title("LOLCode Interpreter") #window title
         self.root.geometry("1200x800") #Size
         self.root.configure(bg="#145da0") 
+        self.interpreter = None
+        self.is_running = False
 
         # menu bar
         menu = tk.Menu(self.root)
@@ -250,7 +252,14 @@ class InterpreterScreen:
                 ast = parser.parse()
                 
                 self.console.insert(tk.END, "Parsing successful!\n", "success")
-                
+        
+                self.interpreter = Interpreter(ast, parser.symbol_table)
+                self.is_running = True
+                self.run_button.config(state=tk.DISABLED)
+                self.resume_execution()
+                self.run_button.config(state=tk.DISABLED)
+                self.resume_execution()
+
             except SyntaxError as e:
                 self.console.insert(tk.END, f"\nSyntax Error: {str(e)}\n", "error")
                 return
@@ -319,8 +328,55 @@ class InterpreterScreen:
         for var, val in symbols:
             self.symbol_table.insert("", "end", values=(var, val))
 
+#
+    def resume_execution(self):
+        if not self.is_running or not self.interpreter:
+            return
+        try:
+            result = self.interpreter.execute()
+            if result.get('status') == 'awaiting_input':
+                variable_needed = result['variable']
+                self.console.insert(tk.END, f"\nProgram is waiting for input for '{variable_needed}'...\n")
+                self.input_entry.config(state=tk.NORMAL) 
+                self.input_entry.focus_set()
+                return
+
+            elif result.get('status') == 'completed':
+                final_output = result.get('output', [])
+                self.console.delete("1.0", tk.END)
+                for line in final_output:
+                    self.console.insert(tk.END, f"{line}\n")
+                self.console.insert(tk.END, "\nExecution completed successfully!\n", "success")
+                self.update_final_symbols()
+                self.cleanup_execution()
+                
+        except RuntimeError as e:
+            self.console.insert(tk.END, f"\nRuntime Error: {e}\n", "error")
+            self.cleanup_execution()
+
     def submit_input(self):
+        if not self.is_running or not self.interpreter:
+            return 
         user_input = self.input_entry.get().strip()
-        if user_input:
-            self.console.insert(tk.END, f"User Input: {user_input}\n")
-            self.input_entry.delete(0, tk.END)
+        self.interpreter.input_buffer.append(user_input)
+        self.console.insert(tk.END, f"Input > {user_input}\n")
+        self.input_entry.delete(0, tk.END)
+        self.input_entry.config(state=tk.DISABLED)
+        self.resume_execution()
+
+    def cleanup_execution(self):
+        self.is_running = False
+        self.interpreter = None
+        self.run_button.config(state=tk.NORMAL)
+        self.input_entry.config(state=tk.DISABLED)
+
+    def update_final_symbols(self):
+        if not self.interpreter: return
+        symbol_data = []
+        for var_name, var_value in self.interpreter.symbol_table.symbols.items():
+            if var_value is None: display_value = "NOOB"
+            elif isinstance(var_value, bool): display_value = "WIN" if var_value else "FAIL"
+            elif isinstance(var_value, float): display_value = f"{var_value:.2f}"
+            else: display_value = str(var_value)
+            symbol_data.append((var_name, display_value))
+        self.update_symbols(symbol_data)

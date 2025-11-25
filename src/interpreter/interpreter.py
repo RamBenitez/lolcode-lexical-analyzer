@@ -16,16 +16,18 @@ class Interpreter:
             self.symbol_table.symbols["IT"] = None
     
     def execute(self):
-        # execute the entire program
-        if self.ast.type != 'program':
-            raise RuntimeError("AST root must be a program node")
+            if self.ast.type != 'program':
+                raise RuntimeError("AST root must be a program node")
+            executable_nodes = self.ast.children
+            while self.execution_pointer < len(executable_nodes):
+                node = executable_nodes[self.execution_pointer]
+                result = self.execute_node(node)
+                if isinstance(result, dict) and result.get('status') == 'awaiting_input':
+                    return result
 
-        # execute all statements in the program
-        for child in self.ast.children:
-            self.execute_node(child)
+                self.execution_pointer += 1
+            return {'status': 'completed', 'output': self.output}
         
-        return self.output
-    
     def execute_node(self, node):
         # execute a single AST node
         if node is None:

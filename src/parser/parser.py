@@ -89,6 +89,8 @@ class Parser:
         token_type = self.current_token()['type']
         if token_type == 'VISIBLE':
             return self.parse_print_statement()
+        elif token_type == 'GIMMEH':
+            return self.parse_input_statement()
         elif token_type == 'I HAS A':
             return self.parse_variable_declaration()
         elif token_type == 'IDENTIFIER':
@@ -303,7 +305,15 @@ class Parser:
             elif self.current_token() and self.current_token()['type'] == 'LINEBREAK':
                 break  # Stop at linebreak
         return node
-        
+
+    #Added for User Input GIMMEH
+    def parse_input_statement(self):
+        self.match('GIMMEH')
+        var_name_token = self.match('IDENTIFIER')
+        var_name = var_name_token['value']
+        self.symbol_table.lookup(var_name)
+        return Node('input_statement', value=var_name)
+
     def parse_expression(self):
         token = self.current_token()
         if not token or token['type'] == 'LINEBREAK':
