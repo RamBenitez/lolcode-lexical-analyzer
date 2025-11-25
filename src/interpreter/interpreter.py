@@ -9,6 +9,7 @@ class Interpreter:
         self.symbol_table = symbol_table
         self.output = []  # store VISIBLE output
         self.input_buffer = []  # for GIMMEH 
+        self.functions = {} #for functio definitions
         
         # create the implicit IT variable
         if "IT" not in self.symbol_table.symbols:
@@ -81,7 +82,7 @@ class Interpreter:
             for child in node.children:
                 if child.type == 'case':
                     # literal in case
-                    case_literal = self.evaluate_expression(child.children[0])
+                    case_literal = child.value
 
                     if not case_executed and case_literal == it_value:
                         # execute satements inside case bloc
@@ -122,9 +123,21 @@ class Interpreter:
                             self.execute_node(stmt)
                         break
         
+        elif node_type == 'function_def':
+            self.functions[node.value] = node
+            return None
+        elif node_type == 'function_call':
+            return self.execute_function_call(node)
+        elif node_type == 'return':
+            value = self.evaluate_expression(node.children[0])
+            return {"return": True, "value": value}
+        elif node_type == 'break':  # GTFO OUTSIDE SWITCH = return NOOB
+            return "return_noob"
         else:
             # for other node types, try to evaluate as expression
             return self.evaluate_expression(node)
+
+
     
     def evaluate_expression(self, node):
         # evaluate an expression and return its value
@@ -296,3 +309,47 @@ class Interpreter:
             return value.upper() == "WIN"
         
         return True
+    
+    def execute_function_call(self, node):
+        func_name = node.value
+        if func_name not in self.functions:
+            raise RuntimeError(f"Function '{func_name}' not defined")
+
+        func_def = self.functions[func_name]
+
+        # Evaluate arguments
+        args = [self.evaluate_expression(child) for child in node.children]
+
+        if len(args) != len(func_def.params):
+            raise RuntimeError(f"Function '{func_name}' expects {len(func_def.params)} args, got {len(args)}")
+
+        # Create new local scope (NEW symbol table)
+        old_symbols = self.symbol_table.symbols.copy()
+        self.symbol_table.symbols = {}
+
+        # Assign parameters
+        for param, val in zip(func_def.params, args):
+            self.symbol_table.symbols[param] = val
+
+        # Execute body
+        return_value = None
+        for stmt in func_def.children:
+            result = self.execute_node(stmt)
+
+            # Return encountered
+            if isinstance(result, dict) and result.get("return"):
+                return_value = result["value"]
+                break
+
+            # GTFO without FOUND YR → NOOB return
+            if result == "return_noob":
+                return_value = None
+                break
+
+        # Restore previous scope
+        self.symbol_table.symbols = old_symbols
+
+        # Store return value in IT
+        self.symbol_table.symbols["IT"] = return_value
+        return return_value
+
