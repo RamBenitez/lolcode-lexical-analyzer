@@ -72,29 +72,31 @@ class Interpreter:
             # store result in IT
             self.symbol_table.symbols["IT"] = output_line
             return None
-
+        
+       #executes  the switch block
         elif node_type == 'switch_statement':
             it_value = self.symbol_table.symbols.get("IT")
 
-            case_executed = False
-            breaking = False
+            case_executed = False #tracks if a matching case has been already run
+            breaking = False #becomes true when GTFO meet
 
+            #iterate through case/deaflut nodes
             for child in node.children:
                 if child.type == 'case':
                     # literal in case
                     case_literal = self.evaluate_expression(child.children[0])
 
                     if not case_executed and case_literal == it_value:
-                        # execute this block
+                        # execute satements inside case bloc
                         for stmt in child.children[1:]:
-                            if stmt.type == "break":
+                            if stmt.type == "break": #GTFO ecnuntered
                                 breaking = True
                                 break
                             self.execute_node(stmt)
                         case_executed = True
                     
                     if breaking:
-                        break
+                        break #stop entirely
 
                 elif child.type == 'default_case' and not case_executed:
                     for stmt in child.children:
