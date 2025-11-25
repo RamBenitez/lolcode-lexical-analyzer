@@ -99,6 +99,14 @@ class Parser:
             return self.parse_orly()
         elif token_type == 'WTF?':
             return self.parse_switch()
+        elif token_type == 'IM IN YR':
+            return self.parse_loop()
+        else:
+            # Try to parse as expression statement (result goes to IT)
+            expr = self.parse_expression()
+            if expr:
+                return Node('expression_statement', children=[expr])
+            return None
     
     def parse_switch(self):
         #math wtf?
@@ -171,12 +179,23 @@ class Parser:
     def parse_orly(self):
         # O RLY? node
         self.match('O RLY?')
+        self.match('LINEBREAK')
         node = Node('orly_statement')
 
         # YA RLY block 
         self.match('YA RLY')
+        self.match('LINEBREAK')
         ya_node = Node('ya_rly')
         while self.current_token() and self.current_token()['type'] not in ('MEBBE', 'NO WAI', 'OIC'):
+            if self.current_token()['type'] == 'LINEBREAK':
+                self.advance()
+                continue
+            if self.current_token()['type'] == 'GTFO':
+                self.match('GTFO')
+                ya_node.add_child(Node('break'))
+                if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+                    self.advance()
+                continue
             stmt = self.parse_statement()
             if stmt:
                 ya_node.add_child(stmt)
@@ -187,8 +206,18 @@ class Parser:
         # NO WAI block
         if self.current_token() and self.current_token()['type'] == 'NO WAI':
             self.advance()
+            self.match('LINEBREAK')
             nowai_node = Node('no_wai')
             while self.current_token() and self.current_token()['type'] != 'OIC':
+                if self.current_token()['type'] == 'LINEBREAK':
+                    self.advance()
+                    continue
+                if self.current_token()['type'] == 'GTFO':
+                    self.match('GTFO')
+                    nowai_node.add_child(Node('break'))
+                    if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+                        self.advance()
+                    continue
                 stmt = self.parse_statement()
                 if stmt:
                     nowai_node.add_child(stmt)
@@ -282,3 +311,71 @@ class Parser:
         right_expr = self.parse_expression()
         node.add_child(right_expr)
         return node
+
+    def parse_loop(self):
+        # IM IN YR <label> <operation> YR <variable> [TIL|WILE <expression>] ... IM OUTTA YR <label>
+        self.match('IM IN YR')
+        label_token = self.match('IDENTIFIER')
+        label = label_token['value']
+        
+        loop_node = Node('loop', value=label)
+        
+        # Check for operation (UPPIN or NERFIN)
+        operation_token = self.current_token()
+        if operation_token['type'] in ('UPPIN', 'NERFIN'):
+            operation = operation_token['type']
+            self.advance()
+            self.match('YR')
+            var_token = self.match('IDENTIFIER')
+            var_name = var_token['value']
+            
+            # Create operation node
+            op_node = Node('loop_operation', value={'operation': operation, 'variable': var_name})
+            loop_node.add_child(op_node)
+        
+        # Check for condition (TIL or WILE)
+        condition_token = self.current_token()
+        if condition_token['type'] in ('TIL', 'WILE'):
+            condition_type = condition_token['type']
+            self.advance()
+            condition_expr = self.parse_expression()
+            
+            # Create condition node
+            cond_node = Node('loop_condition', value=condition_type)
+            cond_node.add_child(condition_expr)
+            loop_node.add_child(cond_node)
+        
+        # Parse loop body
+        self.match('LINEBREAK')
+        body_node = Node('loop_body')
+        
+        while self.current_token() and self.current_token()['type'] != 'IM OUTTA YR':
+            if self.current_token()['type'] == 'LINEBREAK':
+                self.advance()
+                continue
+            
+            if self.current_token()['type'] == 'GTFO':
+                self.match('GTFO')
+                body_node.add_child(Node('break'))
+                if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+                    self.advance()
+                continue
+            
+            stmt = self.parse_statement()
+            if stmt:
+                body_node.add_child(stmt)
+                
+            # Consume linebreak after statement
+            if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+                self.advance()
+        
+        loop_node.add_child(body_node)
+        
+        # Match loop terminator
+        self.match('IM OUTTA YR')
+        end_label_token = self.match('IDENTIFIER')
+        
+        if end_label_token['value'] != label:
+            raise SyntaxError(f"Loop label mismatch: expected '{label}', got '{end_label_token['value']}'")
+        
+        return loop_node

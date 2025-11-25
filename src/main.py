@@ -7,7 +7,7 @@ from interpreter.interpreter import Interpreter
 
 
 def main():
-    file_path = "../tests/testcase.lol"
+    file_path = "../tests/loop_demo.lol"
     
     try:
         # Lexical Analysis
@@ -44,7 +44,12 @@ def main():
         print("=" * 60)
         print("EXECUTION OUTPUT")
         print("=" * 60)
-        output = interpreter.execute()
+        result = interpreter.execute()
+        
+        # Print the output
+        for line in interpreter.output:
+            print(line)
+        print()
         
         # Display Symbol Table (after execution with actual values)
         print("=" * 60)
