@@ -8,8 +8,8 @@ class Interpreter:
         self.ast = ast
         self.symbol_table = symbol_table
         self.output = []  # store VISIBLE output
-        self.input_buffer = [] # for GIMMEH 
-        self.execution_pointer = 0
+        self.input_buffer = []  # for GIMMEH 
+        self.functions = {} #for functio definitions
         
         # create the implicit IT variable
         if "IT" not in self.symbol_table.symbols:
@@ -84,7 +84,7 @@ class Interpreter:
             for child in node.children:
                 if child.type == 'case':
                     # literal in case
-                    case_literal = self.evaluate_expression(child.children[0])
+                    case_literal = child.value
 
                     if not case_executed and case_literal == it_value:
                         # execute satements inside case bloc
@@ -125,18 +125,24 @@ class Interpreter:
                             self.execute_node(stmt)
                         break
         
-        #Added for User Input GIMMEH
-        elif node_type == 'input_statement':
-            if not self.input_buffer:
-                return {'status': 'awaiting_input', 'variable': node.value}
-            user_input = self.input_buffer.pop(0)
-            var_name = node.value
-            self.symbol_table.symbols[var_name] = user_input
-            return None 
-        
+        elif node_type == 'function_def':
+            self.functions[node.value] = node
+            return None
+
+        elif node_type == 'function_call':
+            return self.execute_function_call(node)
+
+        elif node_type == 'return':
+            value = self.evaluate_expression(node.children[0])
+            return {"return": True, "value": value}
+
+        elif node_type == 'break':  #gtfo outside switch 
+            return "return_noob"
         else:
             # for other node types, try to evaluate as expression
             return self.evaluate_expression(node)
+
+
     
     def evaluate_expression(self, node):
         # evaluate an expression and return its value
@@ -161,6 +167,7 @@ class Interpreter:
         # Variable reference
         elif node_type == 'variable':
             var_name = node.value
+            # check local scope
             if var_name not in self.symbol_table.symbols:
                 raise RuntimeError(f"Variable '{var_name}' not declared")
             value = self.symbol_table.symbols[var_name]
@@ -308,3 +315,48 @@ class Interpreter:
             return value.upper() == "WIN"
         
         return True
+    
+    def execute_function_call(self, node):
+        func_name = node.value
+        if func_name not in self.functions:
+            raise RuntimeError(f"Function '{func_name}' not defined")
+
+        func_def = self.functions[func_name]
+
+        # Evaluate arguments
+        args = [self.evaluate_expression(child) for child in node.children]
+
+        if len(args) != len(func_def.params):
+            raise RuntimeError(f"Function '{func_name}' expects {len(func_def.params)} args, got {len(args)}")
+
+        #create new local scope new sym table
+        old_symbols = self.symbol_table.symbols.copy()
+        # local scope with parent reference
+        self.symbol_table.symbols = {}
+
+        # Assign parameters
+        for param, val in zip(func_def.params, args):
+            self.symbol_table.symbols[param] = val
+
+        # Execute body
+        return_value = None
+        for stmt in func_def.children:
+            result = self.execute_node(stmt)
+
+            # Return encountered
+            if isinstance(result, dict) and result.get("return"):
+                return_value = result["value"]
+                break
+
+            # GTFO without FOUND YR → NOOB return
+            if result == "return_noob":
+                return_value = None
+                break
+
+        # Restore previous scope
+        self.symbol_table.symbols = old_symbols
+
+        # Store return value in IT
+        self.symbol_table.symbols["IT"] = return_value
+        return return_value
+

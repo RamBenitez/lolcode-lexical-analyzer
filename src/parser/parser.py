@@ -99,13 +99,75 @@ class Parser:
             return self.parse_orly()
         elif token_type == 'WTF?':
             return self.parse_switch()
+        elif token_type == 'HOW IZ I':
+            return self.parse_function_definition()
+        elif token_type == 'I IZ':
+            return self.parse_function_call()
+        elif token_type == 'FOUND YR':
+            return self.parse_return_statement()
     
+    def parse_function_definition(self):
+        self.match('HOW IZ I')
+        func_name = self.match('IDENTIFIER')['value']
+
+        #parse parameters
+        params = []
+        if self.current_token() ['type'] == 'YR':
+            while True:
+                self.match('YR')
+                param_name = self.match('IDENTIFIER')['value']
+                params.append(param_name)
+
+                if self.current_token()['type'] != 'AN':
+                    break
+                self.match('AN')
+        func_node = Node('function_def', value=func_name)
+        func_node.params = params
+
+        #parse function body
+        #body until IF U SAY SO
+        while self.current_token()['type'] != 'IF U SAY SO':
+            stmt = self.parse_statement()
+            if stmt:
+                func_node.add_child(stmt)
+            if self.current_token()['type'] == 'LINEBREAK':
+                self.advance()
+        
+        self.match('IF U SAY SO')
+        return func_node
+    
+    def parse_function_call(self):
+        self.match('I IZ')
+        func_name = self.match('IDENTIFIER')['value']
+
+        args = []
+        if self.current_token()['type'] == 'YR':
+            while True:
+                self.match('YR')
+                expr = self.parse_expression()
+                args.append(expr)
+
+                if self.current_token()['type'] != 'AN':
+                    break
+                self.match('AN')
+        self.match('MKAY')
+        call_node = Node('function_call', value=func_name)
+        for a in args:
+            call_node.add_child(a)
+        return call_node
+    
+    def parse_return_statement(self):
+        self.match('FOUND YR')
+        expr = self.parse_expression()
+        return Node('return', children=[expr])
+
+     #parses WTF? OMG, OMGWTF OIC structure
     def parse_switch(self):
         #math wtf?
         self.match('WTF?')
         node = Node ('switch_statement')
 
-        #parse cases
+        #parse cases bock untils oic
         while self.current_token() and self.current_token()['type'] != 'OIC':
             tok = self.current_token()['type']
 
@@ -123,31 +185,36 @@ class Parser:
             else:
                 raise SyntaxError(f"Unexpected token in switch: {tok}")
 
-        # END OF SWITCH
+        # end of switch case
         self.match('OIC')
         return node
-    
+    #parse a single omg case block
+    #stops paring when next omg, omgwtf oic
     def parse_switch_case(self):
         self.match('OMG')
         case_value = self.parse_literal()  # literal only
         case_node = Node('case', value=case_value.value)
-
+        # Add the literal node as FIRST CHILD
+        case_node.add_child(Node("literal", value=case_value.value))
         # Parse the case block
         while self.current_token() and self.current_token()['type'] not in ('OMG', 'OMGWTF', 'OIC'):
             if self.current_token()['type'] == 'GTFO':
                 self.match('GTFO')
                 case_node.add_child(Node('break'))
                 break
-            
+
+            #normal statement inside case
             stmt = self.parse_statement()
             if stmt:
                 case_node.add_child(stmt)
-
+            
+            #skip the blank lines
             if self.current_token()['type'] == 'LINEBREAK':
                 self.advance()
 
         return case_node
-
+    
+    #parses the omgwtf default case
     def parse_default_case(self):
         self.match('OMGWTF')
         default_node = Node('default_case')
@@ -254,7 +321,7 @@ class Parser:
         operation_types = ['SUM OF', 'DIFF OF', 'PRODUKT OF', 'QUOSHUNT OF', 'MOD OF', 'BIGGR OF', 'SMALLR OF', 'BOTH SAEM', 'DIFFRINT']
         if token['type'] in operation_types:
             return self.parse_binary_operation()
-        elif 'Literal' in token['type']:
+        elif token['type'] in ['NUMBR Literal', 'NUMBAR Literal', 'YARN Literal', 'TROOF Literal']:
             return self.parse_literal()
         elif token['type'] == 'IDENTIFIER':
             self.symbol_table.lookup(token['value'])
