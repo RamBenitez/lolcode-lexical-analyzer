@@ -37,14 +37,13 @@ def main():
         parser = Parser(token_dicts)
         ast = parser.parse()
         
+        # Semantics
+        interpreter = Interpreter(ast, parser.symbol_table)
+        
         # Output in GUI
         print("=" * 60)
         print("EXECUTION OUTPUT")
         print("=" * 60)
-        interpreter.execute()
-        
-        # Semantics
-        interpreter = Interpreter(ast, parser.symbol_table)
         output = interpreter.execute()
         
         # Display Symbol Table (after execution with actual values)
