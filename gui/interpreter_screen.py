@@ -169,8 +169,26 @@ class InterpreterScreen:
             font=("Consolas", 10)
         )
         self.console.pack(padx=10, pady=5, fill=tk.BOTH, expand=True)
+    
+        # Input section
+        input_frame = tk.Frame(main_container, bg="#E3F2FD")
+        input_frame.grid(row=3, column=0, pady=(0, 5))
 
+        input_label = tk.Label(
+            input_frame,
+            text="Program Input:",
+            font=("Arial", 10, "bold"),
+            bg="#E3F2FD",
+            fg="#0D47A1"
+        )
+        input_label.pack(side="left", padx=5)
 
+        self.input_entry = tk.Entry(input_frame, width=60)
+        self.input_entry.pack(side="left", padx=5)
+
+        submit_input = ttk.Button(input_frame, text="Submit", command=self.submit_input)
+        submit_input.pack(side="left", padx=5)
+        
     # file handling
     def open_file(self):
         #open the dialog box for the lolcode files
