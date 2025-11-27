@@ -10,6 +10,7 @@ class Interpreter:
         self.output = []  # store VISIBLE output
         self.input_buffer = []  # for GIMMEH 
         self.functions = {} #for functio definitions
+        self.execution_pointer = 0
         
         # create the implicit IT variable
         if "IT" not in self.symbol_table.symbols:

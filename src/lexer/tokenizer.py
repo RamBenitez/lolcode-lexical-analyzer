@@ -26,7 +26,23 @@ class LexicalAnalyzer:
         # returns a tuple of tokens and errors
         tokens, errors = [], []
         
+        multi_line_comment = False
+
         for line_num, line in enumerate(lines, start=1):
+            #OBTW: starts a multi-line comment
+            if line.strip() == 'OBTW':
+                multi_line_comment = True
+                continue
+
+            #TLDR: ends a multi-line comment
+            if line.strip() == 'TLDR':
+                multi_line_comment  = False
+                continue 
+                
+            # Skip lines inside multi-line comments
+            if multi_line_comment :
+                continue 
+
             pos = 0
             
             while pos < len(line):
