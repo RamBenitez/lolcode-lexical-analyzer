@@ -11,10 +11,11 @@ class Interpreter:
         self.input_buffer = []  # for GIMMEH 
         self.functions = {} #for functio definitions
         self.execution_pointer = 0
-        
+
         # create the implicit IT variable
         if "IT" not in self.symbol_table.symbols:
             self.symbol_table.symbols["IT"] = None
+    
     
     def execute(self):
             if self.ast.type != 'program':
