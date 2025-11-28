@@ -16,7 +16,7 @@ class Interpreter:
         if "IT" not in self.symbol_table.symbols:
             self.symbol_table.symbols["IT"] = None
     
-    
+
     def execute(self):
             if self.ast.type != 'program':
                 raise RuntimeError("AST root must be a program node")
@@ -107,7 +107,47 @@ class Interpreter:
 
             return None
 
-    
+        #GIMMEH
+        elif node_type == 'input_statement':
+            if not self.input_buffer:
+                return {'status': 'awaiting_input', 'variable': node.value}
+            user_input = self.input_buffer.pop(0)
+            var_name = node.value
+            self.symbol_table.symbols[var_name] = user_input
+            return None 
+        
+        #IS NOW A: Hanndles type casting
+        elif node_type == 'recast_statement':
+            var_name = node.value
+            target_type = node.children[0].value 
+            current_value = self.symbol_table.symbols[var_name]
+            new_value = self.perform_cast(current_value, target_type)
+            self.symbol_table.symbols[var_name] = new_value
+            self.symbol_table.symbols["IT"] = new_value
+            return None
+
+        #IM IN YR: Loop handling
+        elif node_type == 'loop_statement': 
+            setup = node.children[0]
+            var_name = setup.value
+            operation = setup.children[0].value
+            # Loop until GTFO is called
+            while True: 
+                for stmt_node in node.children[1:]:
+                    result = self.execute_node(stmt_node)
+                    if result == 'break_loop':
+                        return None
+                
+                current_val = self.to_number(self.symbol_table.symbols[var_name])
+                if operation == 'UPPIN':
+                    self.symbol_table.symbols[var_name] = current_val + 1
+                else:
+                    self.symbol_table.symbols[var_name] = current_val - 1
+            return None
+
+        elif node_type == 'break_statement': 
+            return 'break_loop'
+
         #O RLY? / YA RLY / NO WAI
         elif node_type == 'orly_statement':
             # IT should already hold the condition
@@ -177,6 +217,38 @@ class Interpreter:
             self.symbol_table.symbols["IT"] = value
             return value
         
+        #MAEK
+        elif node_type == 'maek_operation': 
+            expr_to_cast = self.evaluate_expression(node.children[0])
+            target_type = node.children[1].value
+            result = self.perform_cast(expr_to_cast, target_type)
+            self.symbol_table.symbols["IT"] = result
+            return result
+
+        #NOT evaluation
+        elif node_type == 'unary_operation': 
+            op = node.value
+            operand = self.evaluate_expression(node.children[0])
+            if op == 'NOT':
+                return not self.to_troof(operand)
+            else:
+                raise RuntimeError(f"Unknown unary operation: {op}")
+
+        elif node_type == 'variadic_operation':
+            op = node.value
+            operands = [self.evaluate_expression(child) for child in node.children]
+            #SMOOSH
+            if op == 'SMOOSH':
+                return "".join([self.to_yarn(op_val) for op_val in operands])
+            #ALL OF
+            elif op == 'ALL OF':  
+                return all(self.to_troof(op_val) for op_val in operands)
+            #ANY OF
+            elif op == 'ANY OF':
+                return any(self.to_troof(op_val) for op_val in operands)
+            else:
+                raise RuntimeError(f"Unknown variadic operation: {op}")
+            
         # Binary operations
         elif node_type == 'binary_operation':
             operation = node.value
@@ -261,6 +333,27 @@ class Interpreter:
         else:
             raise RuntimeError(f"Unknown operation: {operation}")
     
+    # Type casting
+    def perform_cast(self, value, target_type):
+            if target_type == 'NUMBR':
+                if isinstance(value, float): return int(value)
+                if isinstance(value, str): return self.to_number(value)
+                if value is None: return 0
+                return self.to_number(value)
+            elif target_type == 'NUMBAR':
+                if isinstance(value, int): return float(value)
+                if isinstance(value, str): return self.to_number(value)
+                if value is None: return 0.0
+                return self.to_number(value)
+            elif target_type == 'YARN':
+                if value is None: return ""
+                return self.to_yarn(value)
+            elif target_type == 'TROOF':
+                if value is None: return False
+                return self.to_troof(value)
+            else:
+                raise RuntimeError(f"Invalid target type for casting: {target_type}")
+
     # Type conversion helpers
     def to_number(self, value):
         # convert value to NUMBR or NUMBAR
@@ -297,8 +390,11 @@ class Interpreter:
             return "WIN" if value else "FAIL"
         
         if isinstance(value, float):
-            # Truncate to 2 decimal places
-            return f"{value:.2f}"
+            s = str(value)
+            if '.' in s:
+                p = s.split('.')
+                return p[0] + '.' + p[1][:2]
+            return s
         
         return str(value)
     
@@ -314,7 +410,7 @@ class Interpreter:
             return value != 0
         
         if isinstance(value, str):
-            return value.upper() == "WIN"
+            return value != ""
         
         return True
     
