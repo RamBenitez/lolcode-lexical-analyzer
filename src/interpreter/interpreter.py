@@ -178,14 +178,15 @@ class Interpreter:
             value = self.evaluate_expression(node.children[0])
             return {"return": True, "value": value}
 
-        elif node_type == 'break':  #gtfo outside switch 
+        elif node_type == 'break': 
             return "return_noob"
         else:
-            # for other node types, try to evaluate as expression
-            return self.evaluate_expression(node)
+            result = self.evaluate_expression(node)
+            self.symbol_table.symbols["IT"] = result
+            return None
 
+        
 
-    
     def evaluate_expression(self, node):
         # evaluate an expression and return its value
         if node is None:
