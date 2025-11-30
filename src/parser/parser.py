@@ -14,6 +14,7 @@ class Parser:
         self.tokens = tokens
         self.position = 0
         self.symbol_table = SymbolTable()
+        self.symbol_table.declare('IT', None)
 
     #get the current token
     def current_token(self):
@@ -24,6 +25,12 @@ class Parser:
     # advance to the next token
     def advance(self):
         self.position += 1
+    
+    #peek at the next token without advancing
+    def peek(self):
+        if self.position + 1 < len(self.tokens):
+            return self.tokens[self.position + 1]
+        return None
     
     # match the current token with expected type and value
     def match(self, expected_type, expected_value=None):
@@ -87,6 +94,13 @@ class Parser:
 
     def parse_statement(self):
         token_type = self.current_token()['type']
+
+        expression_starters = [
+            'SUM OF', 'DIFF OF', 'PRODUKT OF', 'QUOSHUNT OF', 'MOD OF', 
+            'BIGGR OF', 'SMALLR OF', 'BOTH SAEM', 'DIFFRINT',
+            'NOT', 'SMOOSH', 'ALL OF', 'ANY OF', 'MAEK'
+        ]
+
         if token_type == 'VISIBLE':
             return self.parse_print_statement()
         elif token_type == 'GIMMEH':
@@ -95,6 +109,14 @@ class Parser:
             return self.parse_variable_declaration()
         elif token_type == 'IDENTIFIER':
             return self.parse_assignment()
+        elif token_type == 'IDENTIFIER':
+            next_token = self.peek()
+            if next_token and next_token['type'] == 'R':
+                return self.parse_assignment()
+            elif next_token and next_token['type'] == 'IS NOW A':
+                return self.parse_recast_statement()
+            else:
+                raise SyntaxError(f"Invalid statement starting with identifier '{self.current_token()['value']}'")
         elif token_type == 'O RLY?':
             return self.parse_orly()
         elif token_type == 'WTF?':
@@ -105,7 +127,13 @@ class Parser:
             return self.parse_function_call()
         elif token_type == 'FOUND YR':
             return self.parse_return_statement()
-    
+        elif token_type in expression_starters or 'Literal' in token_type:
+            return self.parse_expression()
+        else:
+            raise SyntaxError(f"Invalid statement: '{self.current_token()['value']}'")
+
+
+
     def parse_function_definition(self):
         self.match('HOW IZ I')
         func_name = self.match('IDENTIFIER')['value']
@@ -318,14 +346,27 @@ class Parser:
         token = self.current_token()
         if not token or token['type'] == 'LINEBREAK':
             return None
-        operation_types = ['SUM OF', 'DIFF OF', 'PRODUKT OF', 'QUOSHUNT OF', 'MOD OF', 'BIGGR OF', 'SMALLR OF', 'BOTH SAEM', 'DIFFRINT']
-        if token['type'] in operation_types:
+        binary_ops = ['SUM OF', 'DIFF OF', 'PRODUKT OF', 'QUOSHUNT OF', 'MOD OF', 'BIGGR OF', 'SMALLR OF', 'BOTH SAEM', 'DIFFRINT']
+        variadic_ops = ['SMOOSH', 'ALL OF', 'ANY OF']
+        unary_ops = ['NOT']
+
+        if token['type'] in binary_ops:
             return self.parse_binary_operation()
-        elif token['type'] in ['NUMBR Literal', 'NUMBAR Literal', 'YARN Literal', 'TROOF Literal']:
+        elif token['type'] in variadic_ops:
+            return self.parse_variadic_operation()
+        elif token['type'] in unary_ops:
+            return self.parse_unary_operation()
+        elif token['type'] == 'MAEK':
+            return self.parse_maek_operation()
+        elif 'Literal' in token['type']:
             return self.parse_literal()
         elif token['type'] == 'IDENTIFIER':
+            if self.peek() and self.peek()['type'] == 'YR':
+                 return self.parse_function_call()
             self.symbol_table.lookup(token['value'])
             return Node('variable', value=self.match('IDENTIFIER')['value'])
+        else:
+            raise SyntaxError(f"Unexpected token in expression: {token['value']}")
 
     def parse_literal(self):
         token = self.current_token()
@@ -348,4 +389,41 @@ class Parser:
         self.match('AN')
         right_expr = self.parse_expression()
         node.add_child(right_expr)
+        return node
+    
+    def parse_recast_statement(self):
+        var_name_token = self.match('IDENTIFIER')
+        self.match('IS NOW A')
+        type_token = self.match('TYPE Literal')
+        node = Node('recast_statement', value=var_name_token['value'])
+        node.add_child(Node('type_literal', value=type_token['value']))
+        return node
+
+    def parse_unary_operation(self):
+        op_token = self.current_token()
+        self.advance() 
+        node = Node('unary_operation', value=op_token['type'])
+        expr_node = self.parse_expression()
+        node.add_child(expr_node)
+        return node
+
+    def parse_variadic_operation(self):
+        op_token = self.current_token()
+        self.advance()
+        node = Node('variadic_operation', value=op_token['type'])
+        while self.current_token() and self.current_token()['type'] != 'MKAY':
+            node.add_child(self.parse_expression())
+            if self.current_token() and self.current_token()['type'] != 'MKAY':
+                self.match('AN')
+        self.match('MKAY')
+        return node
+        
+    def parse_maek_operation(self):
+        self.match('MAEK')
+        node = Node('maek_operation')
+        expr_node = self.parse_expression()
+        node.add_child(expr_node)
+        self.match('A')
+        type_node = self.match('TYPE Literal')
+        node.add_child(Node('type_literal', value=type_node['value']))
         return node
