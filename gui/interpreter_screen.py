@@ -200,7 +200,15 @@ class InterpreterScreen:
                 code = file.read()
             self.editor.delete("1.0", tk.END) #clear the editor content
             self.editor.insert("1.0", code)
+            self.console.delete("1.0", tk.END)  # Clear console
             self.console.insert(tk.END, f"Loaded file: {file_path}\n")
+            
+            # Reset UI state when a new file is opened
+            self.cleanup_execution()
+            
+            # Clear token and symbol tables
+            self.update_tokens([])
+            self.update_symbols([])
 
     def save_file(self):
 
@@ -243,6 +251,7 @@ class InterpreterScreen:
                 self.console.insert(tk.END, "\nLexical Errors:\n", "error")
                 for error in errors:
                     self.console.insert(tk.END, f"  {error}\n", "error")
+                self.cleanup_execution()  # Re-enable button on lexical errors
                 return
             
             # Try to parse
@@ -256,56 +265,22 @@ class InterpreterScreen:
                 self.interpreter = Interpreter(ast, parser.symbol_table)
                 self.is_running = True
                 self.run_button.config(state=tk.DISABLED)
-                self.resume_execution()
-                self.run_button.config(state=tk.DISABLED)
+                self.input_entry.config(state=tk.DISABLED)  # Initially disable input
                 self.resume_execution()
 
             except SyntaxError as e:
                 self.console.insert(tk.END, f"\nSyntax Error: {str(e)}\n", "error")
+                self.cleanup_execution()  # Re-enable button on error
                 return
             except Exception as e:
                 self.console.insert(tk.END, f"\nParser Error: {str(e)}\n", "error")
+                self.cleanup_execution()  # Re-enable button on error
                 return
-            
-            # Execute the code with the interpreter
-            try:
-                interpreter = Interpreter(ast, parser.symbol_table)
-                output = interpreter.execute()
-                
-                # Display program output in console
-                if output:
-                    self.console.insert(tk.END, "\nProgram Output:\n", "success")
-                    for line in output:
-                        self.console.insert(tk.END, f"{line}\n")
-                
-                # Display symbol table with actual runtime values
-                symbol_data = []
-                for var_name, var_value in interpreter.symbol_table.symbols.items():
-                    # Convert value to displayable string
-                    if var_value is None:
-                        display_value = "NOOB"
-                    elif isinstance(var_value, bool):
-                        display_value = "WIN" if var_value else "FAIL"
-                    elif isinstance(var_value, float):
-                        display_value = f"{var_value:.2f}"
-                    else:
-                        display_value = str(var_value)
-                    
-                    symbol_data.append((var_name, display_value))
-                
-                self.update_symbols(symbol_data)
-                
-                self.console.insert(tk.END, f"\nExecution completed successfully!\n", "success")
-                
-            except Exception as e:
-                self.console.insert(tk.END, f"\nRuntime Error: {str(e)}\n", "error")
-                import traceback
-                error_details = traceback.format_exc()
-                self.console.insert(tk.END, f"{error_details}\n", "error")
                 
         except Exception as e:
             self.console.insert(tk.END, f"\nError during execution: {e}\n", "error")
             messagebox.showerror("Execution Error", str(e))
+            self.cleanup_execution()  # Re-enable button on error
         
         # Configure text tags for colored output
         self.console.tag_config("error", foreground="#FF5555")
@@ -331,6 +306,7 @@ class InterpreterScreen:
 #
     def resume_execution(self):
         if not self.is_running or not self.interpreter:
+            self.cleanup_execution()  # Ensure cleanup if state is invalid
             return
         try:
             result = self.interpreter.execute()
@@ -348,6 +324,9 @@ class InterpreterScreen:
                     self.console.insert(tk.END, f"{line}\n")
                 self.console.insert(tk.END, "\nExecution completed successfully!\n", "success")
                 self.update_final_symbols()
+                self.cleanup_execution()
+            else:
+                # Handle unexpected status - cleanup to restore UI state
                 self.cleanup_execution()
                 
         except RuntimeError as e:

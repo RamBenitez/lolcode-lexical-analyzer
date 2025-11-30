@@ -127,6 +127,9 @@ class Interpreter:
             return None
 
         #IM IN YR: Loop handling
+        elif node_type == 'loop':
+            return self.execute_loop(node)
+
         elif node_type == 'loop_statement': 
             setup = node.children[0]
             var_name = setup.value
@@ -157,15 +160,24 @@ class Interpreter:
                 for child in node.children:
                     if child.type == 'ya_rly':
                         for stmt in child.children:
-                            self.execute_node(stmt)
+                            if stmt.type == 'break':
+                                return {'type': 'break'}
+                            result = self.execute_node(stmt)
+                            if isinstance(result, dict) and result.get('type') == 'break':
+                                return result
                         break
             else:
                 # Execute NO WAI block if exists
                 for child in node.children:
                     if child.type == 'no_wai':
                         for stmt in child.children:
-                            self.execute_node(stmt)
+                            if stmt.type == 'break':
+                                return {'type': 'break'}
+                            result = self.execute_node(stmt)
+                            if isinstance(result, dict) and result.get('type') == 'break':
+                                return result
                         break
+            return None
         
         elif node_type == 'function_def':
             self.functions[node.value] = node
@@ -177,6 +189,12 @@ class Interpreter:
         elif node_type == 'return':
             value = self.evaluate_expression(node.children[0])
             return {"return": True, "value": value}
+
+        elif node_type == 'expression_statement':
+            # Expression statement - evaluate and store result in IT
+            result = self.evaluate_expression(node.children[0])
+            self.symbol_table.symbols["IT"] = result
+            return None
 
         elif node_type == 'break':  #gtfo outside switch 
             return "return_noob"
@@ -205,6 +223,9 @@ class Interpreter:
         
         elif node_type == 'literal_troof':
             return node.value == 'WIN'
+        
+        elif node_type == 'literal_noob':
+            return None
         
         # Variable reference
         elif node_type == 'variable':
@@ -258,6 +279,10 @@ class Interpreter:
             # Store result in IT
             self.symbol_table.symbols["IT"] = result
             return result
+        
+        # Function call as expression
+        elif node_type == 'function_call':
+            return self.execute_function_call(node)
         
         else:
             raise RuntimeError(f"Unknown expression type: {node_type}")
@@ -457,4 +482,90 @@ class Interpreter:
         # Store return value in IT
         self.symbol_table.symbols["IT"] = return_value
         return return_value
+
+    def execute_loop(self, node):
+        # Execute a loop statement
+        # node.value contains the loop label
+        # Children: loop_operation (optional), loop_condition (optional), loop_body
+
+        operation_node = None
+        condition_node = None
+        body_node = None
+
+        # Extract child nodes
+        for child in node.children:
+            if child.type == 'loop_operation':
+                operation_node = child
+            elif child.type == 'loop_condition':
+                condition_node = child
+            elif child.type == 'loop_body':
+                body_node = child
+
+        # Infinite loop protection counter
+        max_iterations = 10000
+        iteration_count = 0
+
+        while True:
+            iteration_count += 1
+            if iteration_count > max_iterations:
+                raise RuntimeError(f"Loop exceeded maximum iterations ({max_iterations})")
+
+            # Check condition before loop body (for TIL and WILE)
+            if condition_node:
+                condition_type = condition_node.value
+                condition_expr = condition_node.children[0]
+                condition_value = self.evaluate_expression(condition_expr)
+                condition_bool = self.to_troof(condition_value)
+
+                # TIL: loop until condition is true (while false)
+                # WILE: loop while condition is true
+                if condition_type == 'TIL':
+                    if condition_bool:  # Condition is true, exit loop
+                        break
+                elif condition_type == 'WILE':
+                    if not condition_bool:  # Condition is false, exit loop
+                        break
+
+            # Execute loop body
+            if body_node:
+                should_break = False
+                for stmt in body_node.children:
+                    if stmt.type == 'break':
+                        should_break = True
+                        break
+                    result = self.execute_node(stmt)
+                    if isinstance(result, dict) and result.get('type') == 'break':
+                        should_break = True
+                        break
+                if should_break:
+                    break
+
+            # Perform operation (UPPIN or NERFIN) after body
+            if operation_node:
+                op_info = operation_node.value
+                operation = op_info['operation']
+                var_name = op_info['variable']
+
+                # Get current value
+                if var_name not in self.symbol_table.symbols:
+                    raise RuntimeError(f"Loop variable '{var_name}' not declared")
+
+                current_value = self.symbol_table.symbols[var_name]
+
+                # Convert to number if needed
+                if current_value is None:
+                    current_value = 0
+                else:
+                    current_value = self.to_number(current_value)
+
+                # Increment or decrement
+                if operation == 'UPPIN':
+                    new_value = current_value + 1
+                elif operation == 'NERFIN':
+                    new_value = current_value - 1
+
+                # Update variable
+                self.symbol_table.symbols[var_name] = new_value
+
+        return None
 
