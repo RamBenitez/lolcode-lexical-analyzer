@@ -163,8 +163,11 @@ class Interpreter:
                             if stmt.type == 'break':
                                 return {'type': 'break'}
                             result = self.execute_node(stmt)
-                            if isinstance(result, dict) and result.get('type') == 'break':
-                                return result
+                            if isinstance(result, dict):
+                                if result.get('type') == 'break':
+                                    return result
+                                if result.get('status') == 'awaiting_input':
+                                    return result
                         break
             else:
                 # Execute NO WAI block if exists
@@ -174,8 +177,11 @@ class Interpreter:
                             if stmt.type == 'break':
                                 return {'type': 'break'}
                             result = self.execute_node(stmt)
-                            if isinstance(result, dict) and result.get('type') == 'break':
-                                return result
+                            if isinstance(result, dict):
+                                if result.get('type') == 'break':
+                                    return result
+                                if result.get('status') == 'awaiting_input':
+                                    return result
                         break
             return None
         
@@ -343,10 +349,50 @@ class Interpreter:
         
         # Comparison operations
         elif operation == 'BOTH SAEM':
-            return left == right
+            # Try direct comparison first
+            if left == right:
+                return True
+            # If one is string and other is number, try converting string to number
+            if isinstance(left, str) and isinstance(right, (int, float)):
+                try:
+                    if '.' in left:
+                        return float(left) == right
+                    else:
+                        return int(left) == right
+                except ValueError:
+                    return False
+            if isinstance(right, str) and isinstance(left, (int, float)):
+                try:
+                    if '.' in right:
+                        return left == float(right)
+                    else:
+                        return left == int(right)
+                except ValueError:
+                    return False
+            return False
         
         elif operation == 'DIFFRINT':
-            return left != right
+            # Try direct comparison first
+            if left == right:
+                return False
+            # If one is string and other is number, try converting string to number
+            if isinstance(left, str) and isinstance(right, (int, float)):
+                try:
+                    if '.' in left:
+                        return float(left) != right
+                    else:
+                        return int(left) != right
+                except ValueError:
+                    return True
+            if isinstance(right, str) and isinstance(left, (int, float)):
+                try:
+                    if '.' in right:
+                        return left != float(right)
+                    else:
+                        return left != int(right)
+                except ValueError:
+                    return True
+            return True
         
         # Boolean operations
         elif operation == 'BOTH OF':

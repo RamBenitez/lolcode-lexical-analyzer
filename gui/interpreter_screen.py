@@ -264,6 +264,7 @@ class InterpreterScreen:
         
                 self.interpreter = Interpreter(ast, parser.symbol_table)
                 self.is_running = True
+                self._output_shown = 0  # Reset output tracking for new run
                 self.run_button.config(state=tk.DISABLED)
                 self.input_entry.config(state=tk.DISABLED)  # Initially disable input
                 self.resume_execution()
@@ -310,27 +311,44 @@ class InterpreterScreen:
             return
         try:
             result = self.interpreter.execute()
+            
+            # Always show any output that was generated
+            current_output = self.interpreter.output
+            if current_output:
+                # Get how many lines we've already shown
+                if not hasattr(self, '_output_shown'):
+                    self._output_shown = 0
+                # Show new output lines
+                for line in current_output[self._output_shown:]:
+                    self.console.insert(tk.END, f"{line}\n")
+                self._output_shown = len(current_output)
+            
+            # Auto-scroll to bottom
+            self.console.see(tk.END)
+            
             if result.get('status') == 'awaiting_input':
                 variable_needed = result['variable']
                 self.console.insert(tk.END, f"\nProgram is waiting for input for '{variable_needed}'...\n")
+                self.console.see(tk.END)  # Scroll to show input prompt
                 self.input_entry.config(state=tk.NORMAL) 
                 self.input_entry.focus_set()
                 return
 
             elif result.get('status') == 'completed':
-                final_output = result.get('output', [])
-                self.console.delete("1.0", tk.END)
-                for line in final_output:
-                    self.console.insert(tk.END, f"{line}\n")
+                # Output already shown incrementally, just show completion message
                 self.console.insert(tk.END, "\nExecution completed successfully!\n", "success")
+                self.console.see(tk.END)  # Scroll to show completion
                 self.update_final_symbols()
+                self._output_shown = 0  # Reset for next run
                 self.cleanup_execution()
             else:
                 # Handle unexpected status - cleanup to restore UI state
+                self._output_shown = 0
                 self.cleanup_execution()
                 
         except RuntimeError as e:
             self.console.insert(tk.END, f"\nRuntime Error: {e}\n", "error")
+            self._output_shown = 0
             self.cleanup_execution()
 
     def submit_input(self):
@@ -339,6 +357,7 @@ class InterpreterScreen:
         user_input = self.input_entry.get().strip()
         self.interpreter.input_buffer.append(user_input)
         self.console.insert(tk.END, f"Input > {user_input}\n")
+        self.console.see(tk.END)
         self.input_entry.delete(0, tk.END)
         self.input_entry.config(state=tk.DISABLED)
         self.resume_execution()
