@@ -124,6 +124,9 @@ class Parser:
             return self.parse_return_statement()
         elif token_type == 'IM IN YR':
             return self.parse_loop()
+        elif token_type == 'GTFO':
+            self.match('GTFO')
+            return Node('break')
         else:
             # Try to parse as expression statement (result goes to IT)
             expr = self.parse_expression()
@@ -169,16 +172,18 @@ class Parser:
         func_name = self.match('IDENTIFIER')['value']
 
         args = []
-        if self.current_token()['type'] == 'YR':
+        if self.current_token() and self.current_token()['type'] == 'YR':
             while True:
                 self.match('YR')
                 expr = self.parse_expression()
                 args.append(expr)
 
-                if self.current_token()['type'] != 'AN':
+                if not self.current_token() or self.current_token()['type'] != 'AN':
                     break
                 self.match('AN')
-        self.match('MKAY')
+        # MKAY is optional (used when function call is in an expression, not needed as statement)
+        if self.current_token() and self.current_token()['type'] == 'MKAY':
+            self.match('MKAY')
         call_node = Node('function_call', value=func_name)
         for a in args:
             call_node.add_child(a)
@@ -361,7 +366,7 @@ class Parser:
     def parse_print_statement(self):
         self.match('VISIBLE')
         node = Node('print_statement')
-        # VISIBLE can have multiple expressions separated by spaces or AN
+        # VISIBLE can have multiple expressions separated by spaces, AN, or + (CONCAT)
         while self.current_token() and self.current_token()['type'] != 'LINEBREAK':
             expr_node = self.parse_expression()
             if expr_node:  # Only add if expression was successfully parsed
@@ -369,11 +374,16 @@ class Parser:
             else:
                 # Could not parse expression, break to avoid infinite loop
                 break
-            # Check if there's an AN separator or just continue with next expression
+            # Check if there's an AN or CONCAT separator or just continue with next expression
             if self.current_token() and self.current_token()['type'] == 'AN':
                 self.advance()  # Skip the AN
+            elif self.current_token() and self.current_token()['type'] == 'CONCAT':
+                self.advance()  # Skip the + (concat)
             elif self.current_token() and self.current_token()['type'] == 'LINEBREAK':
                 break  # Stop at linebreak
+            # If next token is an expression starter, continue without separator (space-separated)
+            elif self.current_token() and self.current_token()['type'] in ['NUMBR Literal', 'NUMBAR Literal', 'YARN Literal', 'TROOF Literal', 'IDENTIFIER', 'SUM OF', 'DIFF OF', 'PRODUKT OF', 'QUOSHUNT OF', 'MOD OF', 'BIGGR OF', 'SMALLR OF', 'BOTH SAEM', 'DIFFRINT', 'BOTH OF', 'EITHER OF', 'WON OF', 'NOT', 'SMOOSH', 'ALL OF', 'ANY OF', 'MAEK', 'I IZ', 'TYPE Literal']:
+                continue  # Continue to next expression (space-separated)
             else:
                 break  # Unknown token, stop parsing arguments
         return node
@@ -437,10 +447,12 @@ class Parser:
                 expr = self.parse_expression()
                 args.append(expr)
 
-                if self.current_token()['type'] != 'AN':
+                if not self.current_token() or self.current_token()['type'] != 'AN':
                     break
                 self.match('AN')
-        self.match('MKAY')
+        # MKAY is optional when at end of line
+        if self.current_token() and self.current_token()['type'] == 'MKAY':
+            self.match('MKAY')
         call_node = Node('function_call', value=func_name)
         for a in args:
             call_node.add_child(a)
@@ -489,9 +501,12 @@ class Parser:
 
     def parse_maek(self):
         self.match('MAEK')
+        # Handle optional leading 'A' (MAEK A <expr> <type>)
+        if self.current_token() and self.current_token()['type'] == 'A':
+            self.match('A')
         # Parse the expression to cast
         expr = self.parse_expression()
-        # Optional 'A' keyword
+        # Optional 'A' keyword before type (MAEK <expr> A <type>)
         if self.current_token() and self.current_token()['type'] == 'A':
             self.match('A')
         # Get target type
@@ -507,7 +522,8 @@ class Parser:
             return Node('literal_numbar', value=float(self.match('NUMBAR Literal')['value']))
         elif token['type'] == 'YARN Literal':
             yarn_value = self.match('YARN Literal')['value']
-            return Node('literal_yarn', value=yarn_value[1:-1])
+            # value already has quotes stripped by tokenizer
+            return Node('literal_yarn', value=yarn_value)
         elif token['type'] == 'TROOF Literal':
             return Node('literal_troof', value=self.match('TROOF Literal')['value'])
 

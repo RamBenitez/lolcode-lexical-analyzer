@@ -29,19 +29,41 @@ class LexicalAnalyzer:
         multi_line_comment = False
 
         for line_num, line in enumerate(lines, start=1):
-            #OBTW: starts a multi-line comment
-            if line.strip() == 'OBTW':
+            stripped = line.strip()
+            
+            # Check for OBTW - must be on its own line (possibly with trailing comment)
+            if stripped.startswith('OBTW'):
+                # OBTW can have trailing content (treated as comment), but cannot have statements before it
+                # Check if OBTW is at beginning of stripped line
+                after_obtw = stripped[4:].strip()
+                # If there's anything after OBTW that's not a comment, that's still allowed per spec
+                # "OBTW and TLDR must have their own lines (which may include some comments but not other statements)"
                 multi_line_comment = True
                 continue
-
-            #TLDR: ends a multi-line comment
-            if line.strip() == 'TLDR':
-                multi_line_comment  = False
+            
+            # Check for TLDR - must be on its own line
+            if stripped.startswith('TLDR'):
+                if not multi_line_comment:
+                    errors.append(f"Error at line {line_num}: TLDR without matching OBTW")
+                    continue
+                # Check if there's content after TLDR that would be a statement
+                after_tldr = stripped[4:].strip()
+                if after_tldr and not after_tldr.startswith('BTW'):
+                    errors.append(f"Error at line {line_num}: TLDR must be on its own line")
+                    continue
+                multi_line_comment = False
                 continue 
                 
             # Skip lines inside multi-line comments
-            if multi_line_comment :
-                continue 
+            if multi_line_comment:
+                continue
+            
+            # Check if OBTW or TLDR appears in the middle of a line (not allowed)
+            if 'OBTW' in line and not stripped.startswith('OBTW'):
+                errors.append(f"Error at line {line_num}: OBTW must be at the start of its own line")
+                continue
+            if 'TLDR' in line and not stripped.startswith('TLDR'):
+                errors.append(f"Error at line {line_num}: TLDR must be at the start of its own line") 
 
             pos = 0
             
@@ -126,5 +148,9 @@ class LexicalAnalyzer:
             value = lexeme[1:-1]  # Remove quotes
         elif token_type == 'TROOF Literal':
             value = (lexeme == 'WIN')
+        elif token_type == 'IDENTIFIER':
+            value = lexeme  # Store identifier name as value
+        elif token_type == 'TYPE Literal':
+            value = lexeme  # Store type name as value
 
         return Token(token_type, lexeme, value, line)

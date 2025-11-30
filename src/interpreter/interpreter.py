@@ -222,6 +222,9 @@ class Interpreter:
             return str(node.value)
         
         elif node_type == 'literal_troof':
+            # Handle both boolean (from tokenizer) and string (from parser)
+            if isinstance(node.value, bool):
+                return node.value
             return node.value == 'WIN'
         
         elif node_type == 'literal_noob':

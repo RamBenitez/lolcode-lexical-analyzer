@@ -256,7 +256,7 @@ class InterpreterScreen:
             
             # Try to parse
             try:
-                token_dicts = [{'type': t.type, 'value': t.lexeme} for t in tokens]
+                token_dicts = [{'type': t.type, 'value': t.value, 'line': t.line} for t in tokens]
                 parser = Parser(token_dicts)
                 ast = parser.parse()
                 
