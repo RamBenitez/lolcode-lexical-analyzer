@@ -352,16 +352,23 @@ class Parser:
         return node
 
     def parse_recast(self):
-        # <variable> IS NOW A <type>
         var_name_token = self.match('IDENTIFIER')
         var_name = var_name_token['value']
         self.symbol_table.lookup(var_name)
+
         self.match('IS NOW A')
+
+        # Ensure type literal
+        if not self.current_token() or self.current_token()['type'] != 'TYPE Literal':
+            raise SyntaxError("IS NOW A must be followed by a valid type literal (NUMBR, NUMBAR, YARN, TROOF, NOOB)")
+
         target_type = self.current_token()['value']
-        self.advance()  # consume type token
+        self.advance()
+
         node = Node('recast_statement', value=var_name)
         node.add_child(Node('type', value=target_type))
         return node
+
 
     def parse_print_statement(self):
         self.match('VISIBLE')
@@ -513,18 +520,23 @@ class Parser:
 
     def parse_maek(self):
         self.match('MAEK')
-        # Handle optional leading 'A' (MAEK A <expr> <type>)
-        if self.current_token() and self.current_token()['type'] == 'A':
-            self.match('A')
-        # Parse the expression to cast
+        # Parse expression to be cast
         expr = self.parse_expression()
-        # Optional 'A' keyword before type (MAEK <expr> A <type>)
-        if self.current_token() and self.current_token()['type'] == 'A':
-            self.match('A')
-        # Get target type
+        if expr is None:
+            raise SyntaxError("MAEK must be followed by an expression")
+
+        if not self.current_token() or self.current_token()['type'] != 'A':
+            raise SyntaxError("MAEK requires 'A' before the target type (e.g., MAEK x A NUMBR)")
+        self.match('A')
+
+        if not self.current_token() or self.current_token()['type'] != 'TYPE Literal':
+            raise SyntaxError("MAEK target type must be a valid type literal (NUMBR, NUMBAR, YARN, TROOF, NOOB)")
+
         target_type = self.current_token()['value']
         self.advance()
+
         return Node('maek_operation', children=[expr, Node('type', value=target_type)])
+
 
     def parse_literal(self):
         token = self.current_token()

@@ -409,24 +409,54 @@ class Interpreter:
     
     # Type casting
     def perform_cast(self, value, target_type):
-            if target_type == 'NUMBR':
-                if isinstance(value, float): return int(value)
-                if isinstance(value, str): return self.to_number(value)
-                if value is None: return 0
-                return self.to_number(value)
-            elif target_type == 'NUMBAR':
-                if isinstance(value, int): return float(value)
-                if isinstance(value, str): return self.to_number(value)
-                if value is None: return 0.0
-                return self.to_number(value)
-            elif target_type == 'YARN':
-                if value is None: return ""
-                return self.to_yarn(value)
-            elif target_type == 'TROOF':
-                if value is None: return False
-                return self.to_troof(value)
-            else:
-                raise RuntimeError(f"Invalid target type for casting: {target_type}")
+
+        # NUMBR → integer
+        if target_type == 'NUMBR':
+            if value is None:
+                return 0
+            if isinstance(value, bool):
+                return 1 if value else 0
+            if isinstance(value, int):
+                return value
+            if isinstance(value, float):
+                return int(value)
+            if isinstance(value, str):
+                if value.isdigit() or (value.startswith('-') and value[1:].isdigit()):
+                    return int(value)
+                raise RuntimeError(f"Cannot cast YARN '{value}' to NUMBR")
+            raise RuntimeError(f"Cannot cast {type(value)} to NUMBR")
+
+        # NUMBAR → float
+        if target_type == 'NUMBAR':
+            if value is None:
+                return 0.0
+            if isinstance(value, bool):
+                return 1.0 if value else 0.0
+            if isinstance(value, int) or isinstance(value, float):
+                return float(value)
+            if isinstance(value, str):
+                try:
+                    return float(value)
+                except:
+                    raise RuntimeError(f"Cannot cast YARN '{value}' to NUMBAR")
+            raise RuntimeError(f"Cannot cast {type(value)} to NUMBAR")
+
+        # YARN
+        if target_type == 'YARN':
+            if value is None:
+                return ""
+            return self.to_yarn(value)
+
+        # TROOF
+        if target_type == 'TROOF':
+            return self.to_troof(value)
+
+        # NOOB
+        if target_type == 'NOOB':
+            return None
+
+        raise RuntimeError(f"Unknown type '{target_type}' in casting")
+
 
     # Type conversion helpers
     def to_number(self, value):
