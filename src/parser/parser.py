@@ -14,7 +14,7 @@ class Parser:
         self.tokens = tokens
         self.position = 0
         self.symbol_table = SymbolTable()
-        self.symbol_table.declare('IT', None)
+        self.symbol_table.symbols['IT'] = None
 
     #get the current token
     def current_token(self):
