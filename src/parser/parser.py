@@ -230,23 +230,22 @@ class Parser:
     #stops paring when next omg, omgwtf oic
     def parse_switch_case(self):
         self.match('OMG')
-        case_value = self.parse_literal()  # literal only
+        case_value = self.parse_literal()
         case_node = Node('case', value=case_value.value)
-        # Add the literal node as FIRST CHILD
         case_node.add_child(Node("literal", value=case_value.value))
-        # Parse the case block
+   
         while self.current_token() and self.current_token()['type'] not in ('OMG', 'OMGWTF', 'OIC'):
+            if self.current_token()['type'] == 'LINEBREAK':
+                self.advance()
+                continue
             if self.current_token()['type'] == 'GTFO':
                 self.match('GTFO')
                 case_node.add_child(Node('break'))
                 break
 
-            #normal statement inside case
             stmt = self.parse_statement()
             if stmt:
                 case_node.add_child(stmt)
-            
-            #skip the blank lines
             if self.current_token()['type'] == 'LINEBREAK':
                 self.advance()
 
@@ -258,6 +257,9 @@ class Parser:
         default_node = Node('default_case')
 
         while self.current_token() and self.current_token()['type'] not in ('OIC',):
+            if self.current_token()['type'] == 'LINEBREAK':
+                self.advance()
+                continue
             if self.current_token()['type'] == 'GTFO':
                 self.match('GTFO')
                 default_node.add_child(Node('break'))
