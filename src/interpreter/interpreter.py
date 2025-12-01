@@ -71,8 +71,6 @@ class Interpreter:
                 output_parts.append(self.to_yarn(value))
             output_line = "".join(output_parts)
             self.output.append(output_line)
-            # store result in IT
-            self.symbol_table.symbols["IT"] = output_line
             return None
         
        #executes  the switch block
