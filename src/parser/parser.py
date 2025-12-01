@@ -55,6 +55,8 @@ class Parser:
             self.advance()
         self.match('HAI')
         self.match('LINEBREAK')
+        while self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+            self.advance()
         if self.current_token() and self.current_token()['type'] == 'WAZZUP':
             program_node.add_child(self.parse_variable_declaration_block())
         while True:
@@ -100,6 +102,9 @@ class Parser:
         if not token: 
             return None
         token_type = token['type']
+        if token_type == 'OBTW':
+            self.parse_multiline_comment()
+            return None
         if token_type == 'VISIBLE':
             return self.parse_print_statement()
         elif token_type == 'GIMMEH':
@@ -160,6 +165,9 @@ class Parser:
         #parse function body
         #body until IF U SAY SO
         while self.current_token()['type'] != 'IF U SAY SO':
+            if self.current_token()['type'] == 'LINEBREAK':
+                self.advance()
+                continue
             stmt = self.parse_statement()
             if stmt:
                 func_node.add_child(stmt)
@@ -227,23 +235,22 @@ class Parser:
     #stops paring when next omg, omgwtf oic
     def parse_switch_case(self):
         self.match('OMG')
-        case_value = self.parse_literal()  # literal only
+        case_value = self.parse_literal()
         case_node = Node('case', value=case_value.value)
-        # Add the literal node as FIRST CHILD
         case_node.add_child(Node("literal", value=case_value.value))
-        # Parse the case block
+   
         while self.current_token() and self.current_token()['type'] not in ('OMG', 'OMGWTF', 'OIC'):
+            if self.current_token()['type'] == 'LINEBREAK':
+                self.advance()
+                continue
             if self.current_token()['type'] == 'GTFO':
                 self.match('GTFO')
                 case_node.add_child(Node('break'))
                 break
 
-            #normal statement inside case
             stmt = self.parse_statement()
             if stmt:
                 case_node.add_child(stmt)
-            
-            #skip the blank lines
             if self.current_token()['type'] == 'LINEBREAK':
                 self.advance()
 
@@ -255,6 +262,9 @@ class Parser:
         default_node = Node('default_case')
 
         while self.current_token() and self.current_token()['type'] not in ('OIC',):
+            if self.current_token()['type'] == 'LINEBREAK':
+                self.advance()
+                continue
             if self.current_token()['type'] == 'GTFO':
                 self.match('GTFO')
                 default_node.add_child(Node('break'))
@@ -271,17 +281,11 @@ class Parser:
 
 
     def parse_orly(self):
-        # O RLY? node
         self.match('O RLY?')
-        # Consume linebreak after O RLY?
         if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
             self.advance()
         node = Node('orly_statement')
-        self.match('LINEBREAK')
-
-        # YA RLY block 
         self.match('YA RLY')
-        # Consume linebreak after YA RLY
         if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
             self.advance()
         ya_node = Node('ya_rly')
@@ -295,19 +299,23 @@ class Parser:
                 if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
                     self.advance()
                 continue
+            
             stmt = self.parse_statement()
             if stmt:
                 ya_node.add_child(stmt)
-            self.match('LINEBREAK')
+                self.match('LINEBREAK')
+            else:
+                if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+                    self.advance()
+
         node.add_child(ya_node)
 
-        # NO WAI block
         if self.current_token() and self.current_token()['type'] == 'NO WAI':
             self.advance()
-            # Consume linebreak after NO WAI
             if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
                 self.advance()
             nowai_node = Node('no_wai')
+            
             while self.current_token() and self.current_token()['type'] != 'OIC':
                 if self.current_token()['type'] == 'LINEBREAK':
                     self.advance()
@@ -318,12 +326,15 @@ class Parser:
                     if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
                         self.advance()
                     continue
+                
                 stmt = self.parse_statement()
                 if stmt:
                     nowai_node.add_child(stmt)
-                self.match('LINEBREAK')
+                    self.match('LINEBREAK')
+                else:
+                    if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+                        self.advance()             
             node.add_child(nowai_node)
-
         self.match('OIC')
         return node
 
@@ -608,3 +619,11 @@ class Parser:
             raise SyntaxError(f"Loop label mismatch: expected '{label}', got '{end_label_token['value']}'")
 
         return loop_node
+    
+    def parse_multiline_comment(self):
+        self.match('OBTW')
+        while self.current_token() and self.current_token()['type'] != 'TLDR':
+            self.advance()
+        
+        self.match('TLDR')
+        return None
