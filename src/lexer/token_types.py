@@ -6,8 +6,7 @@ TOKEN_SPECIFICATION = [
     ('WAZZUP', r'WAZZUP'),
     ('BUHBYE', r'BUHBYE'),
     ('BTW', r'BTW'),
-    ('OBTW', r'OBTW'),
-    ('TLDR', r'TLDR'),
+    # OBTW and TLDR are handled at line level in tokenizer, not as tokens
     ('SUM OF', r'SUM OF'),
     ('DIFF OF', r'DIFF OF'),
     ('PRODUKT OF', r'PRODUKT OF'),
@@ -63,11 +62,12 @@ TOKEN_SPECIFICATION = [
     ('WILE', r'WILE'),
     ('GTFO', r'GTFO'),
     ('MKAY', r'MKAY'),
-    ('AN', r'AN'),
+    ('AN', r'[Aa][Nn]'),  # Case-insensitive AN
+    ('CONCAT', r'\+'),  # + for concatenation in VISIBLE
 
 
     # Identifier and Miscellaneous
-    ('IDENTIFIER', r'[a-zA-Z][a-zA-Z0-9]*'),
-    ('linebreak', r'\n'),
-    ('WHITESPACE', r'[ \t\r]+'),
+    ('IDENTIFIER', r'[a-zA-Z][a-zA-Z0-9_]*'),
+    # linebreak is handled manually in tokenizer, not as a token pattern
+    ('WHITESPACE', r'[ \t\r\n]+'),
 ]
