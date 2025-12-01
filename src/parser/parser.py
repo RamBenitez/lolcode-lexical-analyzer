@@ -14,6 +14,7 @@ class Parser:
         self.tokens = tokens
         self.position = 0
         self.symbol_table = SymbolTable()
+        self.symbol_table.declare('IT', None)
 
     #get the current token
     def current_token(self):
@@ -25,9 +26,17 @@ class Parser:
     def advance(self):
         self.position += 1
     
+    #peek at the next token without advancing
+    def peek(self):
+        if self.position + 1 < len(self.tokens):
+            return self.tokens[self.position + 1]
+        return None
+    
     # match the current token with expected type and value
     def match(self, expected_type, expected_value=None):
         token = self.current_token()
+        if token is None:
+            raise SyntaxError(f"Unexpected end of file. Expected '{expected_type}'")
         if token['type'] == expected_type:
             if expected_value is None or token['value'] == expected_value:
                 self.advance()
@@ -42,30 +51,26 @@ class Parser:
     # parses the program
     def parse_program(self):
         program_node = Node('program')
-        
-        # Skip any leading linebreaks (from comments or blank lines before HAI)
         while self.current_token() and self.current_token()['type'] == 'LINEBREAK':
             self.advance()
-        
         self.match('HAI')
         self.match('LINEBREAK')
-        
-        # Skip any extra linebreaks (from comments or blank lines after HAI)
-        while self.current_token() and self.current_token()['type'] == 'LINEBREAK':
-            self.advance()
-        
         if self.current_token() and self.current_token()['type'] == 'WAZZUP':
             program_node.add_child(self.parse_variable_declaration_block())
-        while self.current_token() and self.current_token()['type'] != 'KTHXBYE':
-            # Skip extra linebreaks (from comments or blank lines)
+        while True:
+            if not self.current_token() or self.current_token()['type'] == 'KTHXBYE':
+                break 
             if self.current_token()['type'] == 'LINEBREAK':
                 self.advance()
                 continue
-            
             stmt = self.parse_statement()
             if stmt:
                 program_node.add_child(stmt)
-            self.match('LINEBREAK')
+            if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+                self.advance()
+            else:
+                if self.current_token() and self.current_token()['type'] != 'KTHXBYE':
+                    raise SyntaxError(f"Expected LINEBREAK after statement, but got {self.current_token()['type']}")
         self.match('KTHXBYE')
         return program_node
 
@@ -91,7 +96,10 @@ class Parser:
         return block_node
 
     def parse_statement(self):
-        token_type = self.current_token()['type']
+        token = self.current_token()
+        if not token: 
+            return None
+        token_type = token['type']
         if token_type == 'VISIBLE':
             return self.parse_print_statement()
         elif token_type == 'GIMMEH':
@@ -99,18 +107,12 @@ class Parser:
         elif token_type == 'I HAS A':
             return self.parse_variable_declaration()
         elif token_type == 'IDENTIFIER':
-            # Check if this is a recast (IS NOW A), assignment (R), or just expression
-            # Peek at next token
-            if self.position + 1 < len(self.tokens):
-                next_token = self.tokens[self.position + 1]
-                if next_token['type'] == 'IS NOW A':
-                    return self.parse_recast()
-                elif next_token['type'] == 'R':
-                    return self.parse_assignment()
-            # Otherwise, it's an expression statement (variable reference that sets IT)
+            next_token = self.peek()
+            if next_token:
+                if next_token['type'] == 'IS NOW A': return self.parse_recast()
+                elif next_token['type'] == 'R': return self.parse_assignment()
             expr = self.parse_expression()
-            if expr:
-                return Node('expression_statement', children=[expr])
+            if expr: return Node('expression_statement', children=[expr])
             return None
         elif token_type == 'O RLY?':
             return self.parse_orly()
@@ -128,12 +130,12 @@ class Parser:
             self.match('GTFO')
             return Node('break')
         else:
-            # Try to parse as expression statement (result goes to IT)
             expr = self.parse_expression()
             if expr:
                 return Node('expression_statement', children=[expr])
-            return None
-    
+            raise SyntaxError(f"Invalid statement start: '{token_type}'")
+
+
     def parse_function_definition(self):
         self.match('HOW IZ I')
         func_name = self.match('IDENTIFIER')['value']
@@ -275,6 +277,7 @@ class Parser:
         if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
             self.advance()
         node = Node('orly_statement')
+        self.match('LINEBREAK')
 
         # YA RLY block 
         self.match('YA RLY')
@@ -295,8 +298,7 @@ class Parser:
             stmt = self.parse_statement()
             if stmt:
                 ya_node.add_child(stmt)
-            if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
-                self.advance()
+            self.match('LINEBREAK')
         node.add_child(ya_node)
 
         # NO WAI block
@@ -319,8 +321,7 @@ class Parser:
                 stmt = self.parse_statement()
                 if stmt:
                     nowai_node.add_child(stmt)
-                if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
-                    self.advance()
+                self.match('LINEBREAK')
             node.add_child(nowai_node)
 
         self.match('OIC')
@@ -429,6 +430,8 @@ class Parser:
             self.advance()
             return Node('literal_noob', value=None)
         elif token['type'] == 'IDENTIFIER':
+            if self.peek() and self.peek()['type'] == 'YR':
+                 return self.parse_function_call()
             self.symbol_table.lookup(token['value'])
             return Node('variable', value=self.match('IDENTIFIER')['value'])
         else:
