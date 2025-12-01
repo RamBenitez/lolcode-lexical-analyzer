@@ -34,7 +34,6 @@ class Interpreter:
         # execute a single AST node
         if node is None:
             return None
-        
         node_type = node.type
 
         # variable declaration block
@@ -214,9 +213,8 @@ class Interpreter:
             result = self.evaluate_expression(node)
             self.symbol_table.symbols["IT"] = result
             return None
-
         
-
+    # evaluates an expression node and returns its value
     def evaluate_expression(self, node):
         # evaluate an expression and return its value
         if node is None:
@@ -654,4 +652,3 @@ class Interpreter:
                 self.symbol_table.symbols[var_name] = new_value
 
         return None
-

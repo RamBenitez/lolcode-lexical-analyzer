@@ -38,7 +38,7 @@ def readLines(file_path:str) -> List[str]:
                 inblockComments = False
                 continue
             if inblockComments:
-                continue #wil skip the content inside OBTW
+                continue #will skip the content inside OBTW
 
             line = removeBTW(line)
 
@@ -48,7 +48,6 @@ def readLines(file_path:str) -> List[str]:
 
             #add the clean lines to the results
             cleanedLines.append(line.strip())
-
     return cleanedLines
 
 # test file
@@ -56,5 +55,3 @@ if __name__ == "__main__":
     testPath = "tests/testcase.lol"
     for i, line in enumerate(readLines(testPath), start=1):
         print(f"{i:02d}: {line}")
-
-
