@@ -55,6 +55,8 @@ class Parser:
             self.advance()
         self.match('HAI')
         self.match('LINEBREAK')
+        while self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+            self.advance()
         if self.current_token() and self.current_token()['type'] == 'WAZZUP':
             program_node.add_child(self.parse_variable_declaration_block())
         while True:
@@ -163,6 +165,9 @@ class Parser:
         #parse function body
         #body until IF U SAY SO
         while self.current_token()['type'] != 'IF U SAY SO':
+            if self.current_token()['type'] == 'LINEBREAK':
+                self.advance()
+                continue
             stmt = self.parse_statement()
             if stmt:
                 func_node.add_child(stmt)
