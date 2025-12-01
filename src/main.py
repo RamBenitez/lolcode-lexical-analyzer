@@ -1,5 +1,4 @@
 # main program to test the LOLCODE Lexical Analyzer
-
 from lexer.tokenizer import LexicalAnalyzer
 from utils.file_reader import readLines
 from parser.parser import Parser
@@ -8,7 +7,7 @@ from interpreter.interpreter import Interpreter
 
 def main():
     file_path = "../tests/testcase.lol"
-    
+
     try:
         # Lexical Analysis
         lines = readLines(file_path)
@@ -56,7 +55,6 @@ def main():
             print(f"{var:<20} {str(value):<30}")
         print()
         
-
     except SyntaxError as e:
         print(f"Syntax Error: {e}")
     except RuntimeError as e:
@@ -65,7 +63,6 @@ def main():
         print(f"Error: File '{file_path}' not found")
     except Exception as e:
         print(f"Error: {e}")
-
 
 if __name__ == "__main__":
     main()

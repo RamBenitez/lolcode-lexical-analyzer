@@ -10,21 +10,15 @@ class LandingPage:
         self.root.geometry("1200x800")
         self.root.configure(bg="#8cbcff")
 
-       
-
-
-
         current_dir = os.path.dirname(__file__)
         logo_path = os.path.join(current_dir, "assets", "logo1.png")
-        
-       
+               
         try:
             img = Image.open(logo_path)
         except FileNotFoundError:
             print(f"File not found at {logo_path}.")
             img = Image.open(os.path.join("gui", "assets", "logo1.png"))
-
-        
+ 
         img = Image.open(logo_path)
         img = img.resize((700, 450), Image.Resampling.LANCZOS)
         self.logo_img = ImageTk.PhotoImage(img)
