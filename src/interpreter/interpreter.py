@@ -94,15 +94,23 @@ class Interpreter:
                             if stmt.type == "break": #GTFO ecnuntered
                                 breaking = True
                                 break
-                            self.execute_node(stmt)
+                            result = self.execute_node(stmt)
+                            if isinstance(result, dict) and result.get('status') == 'awaiting_input':
+                                return result
+                            if isinstance(result, dict) and result.get('type') == 'break':
+                                breaking = True
+                                break
                         case_executed = True
                     
                     if breaking:
                         break #stop entirely
-
                 elif child.type == 'default_case' and not case_executed:
                     for stmt in child.children:
-                        self.execute_node(stmt)
+                        result = self.execute_node(stmt)
+                        if isinstance(result, dict) and result.get('status') == 'awaiting_input':
+                            return result                    
+                        if isinstance(result, dict) and result.get('type') == 'break':
+                            break
                     break
 
             return None
