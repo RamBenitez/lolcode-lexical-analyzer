@@ -51,37 +51,26 @@ class Parser:
     # parses the program
     def parse_program(self):
         program_node = Node('program')
-        
-        # Skip initial linebreaks
         while self.current_token() and self.current_token()['type'] == 'LINEBREAK':
             self.advance()
-        
         self.match('HAI')
         self.match('LINEBREAK')
-        
         if self.current_token() and self.current_token()['type'] == 'WAZZUP':
             program_node.add_child(self.parse_variable_declaration_block())
-        
-
-        while self.current_token() is not None:
-            current = self.current_token()
-            
-            if current['type'] == 'KTHXBYE':
+        while True:
+            if not self.current_token() or self.current_token()['type'] == 'KTHXBYE':
                 break 
-            
-            if current['type'] == 'LINEBREAK':
+            if self.current_token()['type'] == 'LINEBREAK':
                 self.advance()
                 continue
-            
             stmt = self.parse_statement()
             if stmt:
                 program_node.add_child(stmt)
-            
-            # Expect linebreak after each statement (except possibly last before KTHXBYE)
             if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
                 self.advance()
-        
-        # Now consume KTHXBYE
+            else:
+                if self.current_token() and self.current_token()['type'] != 'KTHXBYE':
+                    raise SyntaxError(f"Expected LINEBREAK after statement, but got {self.current_token()['type']}")
         self.match('KTHXBYE')
         return program_node
 
@@ -107,36 +96,24 @@ class Parser:
         return block_node
 
     def parse_statement(self):
-        token_type = self.current_token()['type']
-
-        expression_starters = [
-            'SUM OF', 'DIFF OF', 'PRODUKT OF', 'QUOSHUNT OF', 'MOD OF', 
-            'BIGGR OF', 'SMALLR OF', 'BOTH SAEM', 'DIFFRINT',
-            'NOT', 'SMOOSH', 'ALL OF', 'ANY OF', 'MAEK'
-        ]
-
-        if token_type == 'LINEBREAK':
-            self.advance()
-            return None 
+        token = self.current_token()
+        if not token: 
+            return None
+        token_type = token['type']
         if token_type == 'VISIBLE':
             return self.parse_print_statement()
         elif token_type == 'GIMMEH':
             return self.parse_input_statement()
-        elif token_type == 'IM IN YR':
-            return self.parse_loop_statement()
         elif token_type == 'I HAS A':
             return self.parse_variable_declaration()
         elif token_type == 'IDENTIFIER':
             next_token = self.peek()
-            if next_token and next_token['type'] == 'R':
-                return self.parse_assignment()
-            elif next_token and next_token['type'] == 'IS NOW A':
-                return self.parse_recast_statement()
-            else:
-                return self.parse_expression()
-        elif token_type == 'GTFO':
-            self.advance() # Consume the GTFO token
-            return Node('break_statement')
+            if next_token:
+                if next_token['type'] == 'IS NOW A': return self.parse_recast()
+                elif next_token['type'] == 'R': return self.parse_assignment()
+            expr = self.parse_expression()
+            if expr: return Node('expression_statement', children=[expr])
+            return None
         elif token_type == 'O RLY?':
             return self.parse_orly()
         elif token_type == 'WTF?':
@@ -147,11 +124,16 @@ class Parser:
             return self.parse_function_call()
         elif token_type == 'FOUND YR':
             return self.parse_return_statement()
-        elif token_type in expression_starters or ('Literal' in token_type and token_type != 'TYPE Literal'):
-            return self.parse_expression()
+        elif token_type == 'IM IN YR':
+            return self.parse_loop()
+        elif token_type == 'GTFO':
+            self.match('GTFO')
+            return Node('break')
         else:
-            raise SyntaxError(f"Invalid statement: '{self.current_token()['value']}'")
-
+            expr = self.parse_expression()
+            if expr:
+                return Node('expression_statement', children=[expr])
+            raise SyntaxError(f"Invalid statement start: '{token_type}'")
 
 
     def parse_function_definition(self):
@@ -160,11 +142,14 @@ class Parser:
 
         #parse parameters
         params = []
-        if self.current_token() ['type'] == 'YR':
+        if self.current_token()['type'] == 'YR':
             while True:
                 self.match('YR')
                 param_name = self.match('IDENTIFIER')['value']
                 params.append(param_name)
+                # Declare parameter in symbol table for the function body parsing
+                if param_name not in self.symbol_table.symbols:
+                    self.symbol_table.symbols[param_name] = None
 
                 if self.current_token()['type'] != 'AN':
                     break
@@ -189,16 +174,18 @@ class Parser:
         func_name = self.match('IDENTIFIER')['value']
 
         args = []
-        if self.current_token()['type'] == 'YR':
+        if self.current_token() and self.current_token()['type'] == 'YR':
             while True:
                 self.match('YR')
                 expr = self.parse_expression()
                 args.append(expr)
 
-                if self.current_token()['type'] != 'AN':
+                if not self.current_token() or self.current_token()['type'] != 'AN':
                     break
                 self.match('AN')
-        self.match('MKAY')
+        # MKAY is optional (used when function call is in an expression, not needed as statement)
+        if self.current_token() and self.current_token()['type'] == 'MKAY':
+            self.match('MKAY')
         call_node = Node('function_call', value=func_name)
         for a in args:
             call_node.add_child(a)
@@ -286,18 +273,28 @@ class Parser:
     def parse_orly(self):
         # O RLY? node
         self.match('O RLY?')
+        # Consume linebreak after O RLY?
+        if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+            self.advance()
         node = Node('orly_statement')
         self.match('LINEBREAK')
 
         # YA RLY block 
         self.match('YA RLY')
-        self.match('LINEBREAK')
+        # Consume linebreak after YA RLY
+        if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+            self.advance()
         ya_node = Node('ya_rly')
         while self.current_token() and self.current_token()['type'] not in ('MEBBE', 'NO WAI', 'OIC'):
             if self.current_token()['type'] == 'LINEBREAK':
                 self.advance()
                 continue
-            
+            if self.current_token()['type'] == 'GTFO':
+                self.match('GTFO')
+                ya_node.add_child(Node('break'))
+                if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+                    self.advance()
+                continue
             stmt = self.parse_statement()
             if stmt:
                 ya_node.add_child(stmt)
@@ -307,12 +304,20 @@ class Parser:
         # NO WAI block
         if self.current_token() and self.current_token()['type'] == 'NO WAI':
             self.advance()
+            # Consume linebreak after NO WAI
+            if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+                self.advance()
             nowai_node = Node('no_wai')
             while self.current_token() and self.current_token()['type'] != 'OIC':
                 if self.current_token()['type'] == 'LINEBREAK':
                     self.advance()
                     continue
-
+                if self.current_token()['type'] == 'GTFO':
+                    self.match('GTFO')
+                    nowai_node.add_child(Node('break'))
+                    if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+                        self.advance()
+                    continue
                 stmt = self.parse_statement()
                 if stmt:
                     nowai_node.add_child(stmt)
@@ -347,19 +352,48 @@ class Parser:
         self.symbol_table.update(var_name, expr_node)
         return node
 
+    def parse_recast(self):
+        var_name_token = self.match('IDENTIFIER')
+        var_name = var_name_token['value']
+        self.symbol_table.lookup(var_name)
+
+        self.match('IS NOW A')
+
+        # Ensure type literal
+        if not self.current_token() or self.current_token()['type'] != 'TYPE Literal':
+            raise SyntaxError("IS NOW A must be followed by a valid type literal (NUMBR, NUMBAR, YARN, TROOF, NOOB)")
+
+        target_type = self.current_token()['value']
+        self.advance()
+
+        node = Node('recast_statement', value=var_name)
+        node.add_child(Node('type', value=target_type))
+        return node
+
+
     def parse_print_statement(self):
         self.match('VISIBLE')
         node = Node('print_statement')
-        # VISIBLE can have multiple expressions separated by spaces or AN
+        # VISIBLE can have multiple expressions separated by spaces, AN, or + (CONCAT)
         while self.current_token() and self.current_token()['type'] != 'LINEBREAK':
             expr_node = self.parse_expression()
             if expr_node:  # Only add if expression was successfully parsed
                 node.add_child(expr_node)
-            # Check if there's an AN separator or just continue with next expression
+            else:
+                # Could not parse expression, break to avoid infinite loop
+                break
+            # Check if there's an AN or CONCAT separator or just continue with next expression
             if self.current_token() and self.current_token()['type'] == 'AN':
                 self.advance()  # Skip the AN
+            elif self.current_token() and self.current_token()['type'] == 'CONCAT':
+                self.advance()  # Skip the + (concat)
             elif self.current_token() and self.current_token()['type'] == 'LINEBREAK':
                 break  # Stop at linebreak
+            # If next token is an expression starter, continue without separator (space-separated)
+            elif self.current_token() and self.current_token()['type'] in ['NUMBR Literal', 'NUMBAR Literal', 'YARN Literal', 'TROOF Literal', 'IDENTIFIER', 'SUM OF', 'DIFF OF', 'PRODUKT OF', 'QUOSHUNT OF', 'MOD OF', 'BIGGR OF', 'SMALLR OF', 'BOTH SAEM', 'DIFFRINT', 'BOTH OF', 'EITHER OF', 'WON OF', 'NOT', 'SMOOSH', 'ALL OF', 'ANY OF', 'MAEK', 'I IZ', 'TYPE Literal']:
+                continue  # Continue to next expression (space-separated)
+            else:
+                break  # Unknown token, stop parsing arguments
         return node
 
     #Added for User Input GIMMEH
@@ -374,27 +408,138 @@ class Parser:
         token = self.current_token()
         if not token or token['type'] == 'LINEBREAK':
             return None
-        binary_ops = ['SUM OF', 'DIFF OF', 'PRODUKT OF', 'QUOSHUNT OF', 'MOD OF', 'BIGGR OF', 'SMALLR OF', 'BOTH SAEM', 'DIFFRINT']
-        variadic_ops = ['SMOOSH', 'ALL OF', 'ANY OF']
-        unary_ops = ['NOT']
-
+        
+        # Binary arithmetic and comparison operations
+        binary_ops = ['SUM OF', 'DIFF OF', 'PRODUKT OF', 'QUOSHUNT OF', 'MOD OF', 
+                      'BIGGR OF', 'SMALLR OF', 'BOTH SAEM', 'DIFFRINT']
+        
+        # Binary boolean operations
+        boolean_binary_ops = ['BOTH OF', 'EITHER OF', 'WON OF']
+        
         if token['type'] in binary_ops:
             return self.parse_binary_operation()
-        elif token['type'] in variadic_ops:
-            return self.parse_variadic_operation()
-        elif token['type'] in unary_ops:
+        elif token['type'] in boolean_binary_ops:
+            return self.parse_binary_operation()
+        elif token['type'] == 'NOT':
             return self.parse_unary_operation()
+        elif token['type'] == 'SMOOSH':
+            return self.parse_smoosh()
+        elif token['type'] in ['ALL OF', 'ANY OF']:
+            return self.parse_infinite_arity_boolean()
         elif token['type'] == 'MAEK':
-            return self.parse_maek_operation()
-        elif 'Literal' in token['type']:
+            return self.parse_maek()
+        elif token['type'] == 'I IZ':
+            return self.parse_function_call_expr()
+        elif token['type'] in ['NUMBR Literal', 'NUMBAR Literal', 'YARN Literal', 'TROOF Literal']:
             return self.parse_literal()
+        elif token['type'] == 'TYPE Literal' and token['value'] == 'NOOB':
+            # NOOB represents an uninitialized value (null)
+            self.advance()
+            return Node('literal_noob', value=None)
         elif token['type'] == 'IDENTIFIER':
             if self.peek() and self.peek()['type'] == 'YR':
                  return self.parse_function_call()
             self.symbol_table.lookup(token['value'])
             return Node('variable', value=self.match('IDENTIFIER')['value'])
         else:
-            raise SyntaxError(f"Unexpected token in expression: {token['value']}")
+            # Unknown token in expression context - return None
+            return None
+
+    def parse_function_call_expr(self):
+        # Function call used as expression (inside VISIBLE, etc.)
+        self.match('I IZ')
+        func_name = self.match('IDENTIFIER')['value']
+
+        args = []
+        if self.current_token() and self.current_token()['type'] == 'YR':
+            while True:
+                self.match('YR')
+                expr = self.parse_expression()
+                args.append(expr)
+
+                if not self.current_token() or self.current_token()['type'] != 'AN':
+                    break
+                self.match('AN')
+        # MKAY is optional when at end of line
+        if self.current_token() and self.current_token()['type'] == 'MKAY':
+            self.match('MKAY')
+        call_node = Node('function_call', value=func_name)
+        for a in args:
+            call_node.add_child(a)
+        return call_node
+
+    def parse_unary_operation(self):
+        # current token is 'NOT'
+        token = self.current_token()
+        if not token or token['type'] != 'NOT':
+            raise SyntaxError("Internal parser error: parse_unary_operation called without NOT token")
+
+        # consume NOT
+        self.advance()
+
+        operand = self.parse_expression()
+        if operand is None:
+            raise SyntaxError("Syntax Error: 'NOT' requires one operand (e.g. NOT <expression>)")
+
+        # wrap into AST node
+        return Node('unary_operation', value='NOT', children=[operand])
+
+
+    def parse_smoosh(self):
+        self.match('SMOOSH')
+        node = Node('variadic_operation', value='SMOOSH')
+        # Parse first operand (if any)
+        first_expr = self.parse_expression()
+        if first_expr:
+            node.add_child(first_expr)
+            # Parse additional operands separated by AN
+            while self.current_token() and self.current_token()['type'] == 'AN':
+                self.advance()  # consume AN
+                expr = self.parse_expression()
+                if expr:
+                    node.add_child(expr)
+                else:
+                    break
+        return node
+
+    def parse_infinite_arity_boolean(self):
+        op_type = self.current_token()['type']
+        self.match(op_type)
+        node = Node('variadic_operation', value=op_type)
+        # Parse first operand
+        first_expr = self.parse_expression()
+        if first_expr:
+            node.add_child(first_expr)
+        # Parse additional operands separated by AN until MKAY
+        while self.current_token() and self.current_token()['type'] == 'AN':
+            self.advance()  # consume AN
+            expr = self.parse_expression()
+            if expr:
+                node.add_child(expr)
+        # Consume MKAY
+        if self.current_token() and self.current_token()['type'] == 'MKAY':
+            self.match('MKAY')
+        return node
+
+    def parse_maek(self):
+        self.match('MAEK')
+        # Parse expression to be cast
+        expr = self.parse_expression()
+        if expr is None:
+            raise SyntaxError("MAEK must be followed by an expression")
+
+        if not self.current_token() or self.current_token()['type'] != 'A':
+            raise SyntaxError("MAEK requires 'A' before the target type (e.g., MAEK x A NUMBR)")
+        self.match('A')
+
+        if not self.current_token() or self.current_token()['type'] != 'TYPE Literal':
+            raise SyntaxError("MAEK target type must be a valid type literal (NUMBR, NUMBAR, YARN, TROOF, NOOB)")
+
+        target_type = self.current_token()['value']
+        self.advance()
+
+        return Node('maek_operation', children=[expr, Node('type', value=target_type)])
+
 
     def parse_literal(self):
         token = self.current_token()
@@ -404,7 +549,8 @@ class Parser:
             return Node('literal_numbar', value=float(self.match('NUMBAR Literal')['value']))
         elif token['type'] == 'YARN Literal':
             yarn_value = self.match('YARN Literal')['value']
-            return Node('literal_yarn', value=yarn_value[1:-1])
+            # value already has quotes stripped by tokenizer
+            return Node('literal_yarn', value=yarn_value)
         elif token['type'] == 'TROOF Literal':
             return Node('literal_troof', value=self.match('TROOF Literal')['value'])
 
@@ -418,111 +564,71 @@ class Parser:
         right_expr = self.parse_expression()
         node.add_child(right_expr)
         return node
-    
-    def parse_recast_statement(self):
-        var_name_token = self.match('IDENTIFIER')
-        self.match('IS NOW A')
-        type_token = self.match('TYPE Literal')
-        node = Node('recast_statement', value=var_name_token['value'])
-        node.add_child(Node('type_literal', value=type_token['value']))
-        return node
 
-    def parse_unary_operation(self):
-        op_token = self.current_token()
-        self.advance() 
-        node = Node('unary_operation', value=op_token['type'])
-        expr_node = self.parse_expression()
-        node.add_child(expr_node)
-        return node
-
-    def parse_variadic_operation(self):
-        op_token = self.current_token()
-        self.advance()
-        node = Node('variadic_operation', value=op_token['type'])
-        while self.current_token() and self.current_token()['type'] != 'MKAY':
-            node.add_child(self.parse_expression())
-            if self.current_token() and self.current_token()['type'] != 'MKAY':
-                self.match('AN')
-        self.match('MKAY')
-        return node
-        
-    def parse_maek_operation(self):
-        self.match('MAEK')
-        node = Node('maek_operation')
-        expr_node = self.parse_expression()
-        node.add_child(expr_node)
-        self.match('A')
-        type_node = self.match('TYPE Literal')
-        node.add_child(Node('type_literal', value=type_node['value']))
-        return node
-
-    def parse_orly(self):
-        self.match('O RLY?')
-        node = Node('orly_statement')
-        self.match('LINEBREAK')
-        self.match('YA RLY')
-        self.match('LINEBREAK')
-        
-        ya_node = Node('ya_rly')
-        while self.current_token() and self.current_token()['type'] not in ('NO WAI', 'OIC'):
-            if self.current_token()['type'] == 'LINEBREAK':
-                self.advance()
-                continue
-
-            stmt = self.parse_statement()
-            if stmt:
-                ya_node.add_child(stmt)
-            self.match('LINEBREAK')
-        node.add_child(ya_node)
-        if self.current_token() and self.current_token()['type'] == 'NO WAI':
-            self.advance() 
-            self.match('LINEBREAK') 
-            nowai_node = Node('no_wai')
-            while self.current_token() and self.current_token()['type'] != 'OIC':
-                if self.current_token()['type'] == 'LINEBREAK':
-                    self.advance()
-                    continue
-
-                stmt = self.parse_statement()
-                if stmt:
-                    nowai_node.add_child(stmt)
-                self.match('LINEBREAK') 
-            node.add_child(nowai_node)
-        self.match('OIC')
-        return node
-    
-
-    def parse_loop_statement(self):
+    def parse_loop(self):
+        # IM IN YR <label> <operation> YR <variable> [TIL|WILE <expression>] ... IM OUTTA YR <label>
         self.match('IM IN YR')
-        loop_label = self.match('IDENTIFIER')['value']
-        
-        node = Node('loop_statement', value=loop_label)
-        
-        operation_token = self.current_token()
-        if operation_token['type'] not in ['UPPIN', 'NERFIN']:
-            raise SyntaxError(f"Expected UPPIN or NERFIN in loop, but got {operation_token['type']}")
-        self.advance()
-        
-        self.match('YR')
-        loop_var_token = self.match('IDENTIFIER')
+        label_token = self.match('IDENTIFIER')
+        label = label_token['value']
 
-        setup_node = Node('loop_setup', value=loop_var_token['value'])
-        setup_node.add_child(Node('operation', value=operation_token['type']))
-        node.add_child(setup_node)
-        
+        loop_node = Node('loop', value=label)
+
+        # Check for operation (UPPIN or NERFIN)
+        operation_token = self.current_token()
+        if operation_token and operation_token['type'] in ('UPPIN', 'NERFIN'):
+            operation = operation_token['type']
+            self.advance()
+            self.match('YR')
+            var_token = self.match('IDENTIFIER')
+            var_name = var_token['value']
+
+            # Create operation node
+            op_node = Node('loop_operation', value={'operation': operation, 'variable': var_name})
+            loop_node.add_child(op_node)
+
+        # Check for condition (TIL or WILE)
+        condition_token = self.current_token()
+        if condition_token and condition_token['type'] in ('TIL', 'WILE'):
+            condition_type = condition_token['type']
+            self.advance()
+            condition_expr = self.parse_expression()
+
+            # Create condition node
+            cond_node = Node('loop_condition', value=condition_type)
+            cond_node.add_child(condition_expr)
+            loop_node.add_child(cond_node)
+
+        # Parse loop body
         self.match('LINEBREAK')
-        
+        body_node = Node('loop_body')
+
         while self.current_token() and self.current_token()['type'] != 'IM OUTTA YR':
             if self.current_token()['type'] == 'LINEBREAK':
                 self.advance()
                 continue
-    
+
+            if self.current_token()['type'] == 'GTFO':
+                self.match('GTFO')
+                body_node.add_child(Node('break'))
+                if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+                    self.advance()
+                continue
+
             stmt = self.parse_statement()
             if stmt:
-                node.add_child(stmt)
-            self.match('LINEBREAK')
+                body_node.add_child(stmt)
+
+            # Consume linebreak after statement
+            if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+                self.advance()
+
+        loop_node.add_child(body_node)
+
+        # Match loop terminator
         self.match('IM OUTTA YR')
-        end_label = self.match('IDENTIFIER')['value']
-        if end_label != loop_label:
-            raise SyntaxError(f"Loop start label '{loop_label}' does not match end label '{end_label}'")
-        return node
+        end_label_token = self.match('IDENTIFIER')
+
+        if end_label_token['value'] != label:
+            raise SyntaxError(f"Loop label mismatch: expected '{label}', got '{end_label_token['value']}'")
+
+        return loop_node

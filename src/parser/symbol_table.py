@@ -6,6 +6,8 @@ class SymbolTable:
     def __init__(self):
         # initialize dictionayr to hold the values
         self.symbols = {}
+        # IT is the implicit variable that always exists
+        self.symbols['IT'] = None
     
     #declare variable in the table
     def declare(self, name, value):
