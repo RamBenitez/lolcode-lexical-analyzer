@@ -352,23 +352,16 @@ class Parser:
         return node
 
     def parse_recast(self):
+        # <variable> IS NOW A <type>
         var_name_token = self.match('IDENTIFIER')
         var_name = var_name_token['value']
         self.symbol_table.lookup(var_name)
-
         self.match('IS NOW A')
-
-        # Ensure type literal
-        if not self.current_token() or self.current_token()['type'] != 'TYPE Literal':
-            raise SyntaxError("IS NOW A must be followed by a valid type literal (NUMBR, NUMBAR, YARN, TROOF, NOOB)")
-
         target_type = self.current_token()['value']
-        self.advance()
-
+        self.advance()  # consume type token
         node = Node('recast_statement', value=var_name)
         node.add_child(Node('type', value=target_type))
         return node
-
 
     def parse_print_statement(self):
         self.match('VISIBLE')
@@ -420,7 +413,7 @@ class Parser:
         elif token['type'] in boolean_binary_ops:
             return self.parse_binary_operation()
         elif token['type'] == 'NOT':
-            return self.parse_unary_operation()
+            return self.parse_not_operation()
         elif token['type'] == 'SMOOSH':
             return self.parse_smoosh()
         elif token['type'] in ['ALL OF', 'ANY OF']:
@@ -465,22 +458,10 @@ class Parser:
             call_node.add_child(a)
         return call_node
 
-    def parse_unary_operation(self):
-        # current token is 'NOT'
-        token = self.current_token()
-        if not token or token['type'] != 'NOT':
-            raise SyntaxError("Internal parser error: parse_unary_operation called without NOT token")
-
-        # consume NOT
-        self.advance()
-
+    def parse_not_operation(self):
+        self.match('NOT')
         operand = self.parse_expression()
-        if operand is None:
-            raise SyntaxError("Syntax Error: 'NOT' requires one operand (e.g. NOT <expression>)")
-
-        # wrap into AST node
         return Node('unary_operation', value='NOT', children=[operand])
-
 
     def parse_smoosh(self):
         self.match('SMOOSH')
@@ -520,23 +501,18 @@ class Parser:
 
     def parse_maek(self):
         self.match('MAEK')
-        # Parse expression to be cast
+        # Handle optional leading 'A' (MAEK A <expr> <type>)
+        if self.current_token() and self.current_token()['type'] == 'A':
+            self.match('A')
+        # Parse the expression to cast
         expr = self.parse_expression()
-        if expr is None:
-            raise SyntaxError("MAEK must be followed by an expression")
-
-        if not self.current_token() or self.current_token()['type'] != 'A':
-            raise SyntaxError("MAEK requires 'A' before the target type (e.g., MAEK x A NUMBR)")
-        self.match('A')
-
-        if not self.current_token() or self.current_token()['type'] != 'TYPE Literal':
-            raise SyntaxError("MAEK target type must be a valid type literal (NUMBR, NUMBAR, YARN, TROOF, NOOB)")
-
+        # Optional 'A' keyword before type (MAEK <expr> A <type>)
+        if self.current_token() and self.current_token()['type'] == 'A':
+            self.match('A')
+        # Get target type
         target_type = self.current_token()['value']
         self.advance()
-
         return Node('maek_operation', children=[expr, Node('type', value=target_type)])
-
 
     def parse_literal(self):
         token = self.current_token()
