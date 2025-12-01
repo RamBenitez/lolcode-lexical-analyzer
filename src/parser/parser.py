@@ -413,7 +413,7 @@ class Parser:
         elif token['type'] in boolean_binary_ops:
             return self.parse_binary_operation()
         elif token['type'] == 'NOT':
-            return self.parse_not_operation()
+            return self.parse_unary_operation()
         elif token['type'] == 'SMOOSH':
             return self.parse_smoosh()
         elif token['type'] in ['ALL OF', 'ANY OF']:
@@ -458,10 +458,22 @@ class Parser:
             call_node.add_child(a)
         return call_node
 
-    def parse_not_operation(self):
-        self.match('NOT')
+    def parse_unary_operation(self):
+        # current token is 'NOT'
+        token = self.current_token()
+        if not token or token['type'] != 'NOT':
+            raise SyntaxError("Internal parser error: parse_unary_operation called without NOT token")
+
+        # consume NOT
+        self.advance()
+
         operand = self.parse_expression()
+        if operand is None:
+            raise SyntaxError("Syntax Error: 'NOT' requires one operand (e.g. NOT <expression>)")
+
+        # wrap into AST node
         return Node('unary_operation', value='NOT', children=[operand])
+
 
     def parse_smoosh(self):
         self.match('SMOOSH')
