@@ -64,4 +64,4 @@ A full-featured LOLCODE interpreter with lexical analysis, syntax parsing, and s
    ```
 
 ## Example Output
-<img width="1502" height="1179" alt="python_KjitpncpqF" src="https://github.com/user-attachments/assets/1a3cfbd0-daae-446b-a71b-4fffd5a79ec3" />
+<img width="1502" height="1065" alt="python_6iqxTupXf1" src="https://github.com/user-attachments/assets/c617eee9-7ee1-416f-a530-7966d2c0cd5e" />
