@@ -8,6 +8,24 @@ A full-featured LOLCODE interpreter with lexical analysis, syntax parsing, and s
 - BENITEZ, Ramil						   
 - RAMOS, John Miles
 - VILLA, Charles Henrico
+
+## Features
+
+- **Program Structure:** `HAI`, `KTHXBYE`
+- **Variables:** `WAZZUP`/`BUHBYE`, `I HAS A`, `ITZ`
+- **Data Types:** `NUMBR`, `NUMBAR`, `YARN`, `TROOF`, `NOOB`
+- **I/O:** `VISIBLE`, `GIMMEH`
+- **Arithmetic:** `SUM OF`, `DIFF OF`, `PRODUKT OF`, `QUOSHUNT OF`, `MOD OF`, `BIGGR OF`, `SMALLR OF`
+- **Boolean:** `BOTH OF`, `EITHER OF`, `WON OF`, `NOT`, `ALL OF`, `ANY OF`
+- **Comparison:** `BOTH SAEM`, `DIFFRINT`
+- **Concatenation:** `SMOOSH`
+- **Type Casting:** `MAEK`, `IS NOW A`
+- **Conditionals:** `O RLY?`/`YA RLY`/`MEBBE`/`NO WAI`/`OIC`
+- **Switch:** `WTF?`/`OMG`/`OMGWTF`/`OIC`
+- **Loops:** `IM IN YR`/`IM OUTTA YR`, `UPPIN`/`NERFIN`, `TIL`/`WILE`
+- **Functions:** `HOW IZ I`/`IF U SAY SO`, `I IZ`, `FOUND YR`
+- **Comments:** `BTW`, `OBTW`/`TLDR`
+
 ## Setup
 
 1. **Clone the repository:**

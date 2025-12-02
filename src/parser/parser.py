@@ -56,6 +56,17 @@ class Parser:
         self.match('LINEBREAK')
         while self.current_token() and self.current_token()['type'] == 'LINEBREAK':
             self.advance()
+        
+        # Handle function definitions that appear before WAZZUP
+        while self.current_token() and self.current_token()['type'] == 'HOW IZ I':
+            func_def = self.parse_function_definition()
+            if func_def:
+                program_node.add_child(func_def)
+            if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+                self.advance()
+            while self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+                self.advance()
+        
         if self.current_token() and self.current_token()['type'] == 'WAZZUP':
             program_node.add_child(self.parse_variable_declaration_block())
         while True:
@@ -302,11 +313,42 @@ class Parser:
             stmt = self.parse_statement()
             if stmt:
                 ya_node.add_child(stmt)
-                self.match('LINEBREAK')
+                if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+                    self.advance()
             else:
                 if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
                     self.advance()
         node.add_child(ya_node)
+
+        # Handle MEBBE blocks (else if)
+        while self.current_token() and self.current_token()['type'] == 'MEBBE':
+            self.advance()  # consume MEBBE
+            # Parse the condition expression after MEBBE
+            mebbe_condition = self.parse_expression()
+            if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+                self.advance()
+            mebbe_node = Node('mebbe')
+            mebbe_node.add_child(mebbe_condition)  # Store condition as first child
+            
+            while self.current_token() and self.current_token()['type'] not in ('MEBBE', 'NO WAI', 'OIC'):
+                if self.current_token()['type'] == 'LINEBREAK':
+                    self.advance()
+                    continue
+                if self.current_token()['type'] == 'GTFO':
+                    self.match('GTFO')
+                    mebbe_node.add_child(Node('break'))
+                    if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+                        self.advance()
+                    continue
+                stmt = self.parse_statement()
+                if stmt:
+                    mebbe_node.add_child(stmt)
+                    if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+                        self.advance()
+                else:
+                    if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+                        self.advance()
+            node.add_child(mebbe_node)
 
         if self.current_token() and self.current_token()['type'] == 'NO WAI':
             self.advance()
@@ -328,7 +370,8 @@ class Parser:
                 stmt = self.parse_statement()
                 if stmt:
                     nowai_node.add_child(stmt)
-                    self.match('LINEBREAK')
+                    if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
+                        self.advance()
                 else:
                     if self.current_token() and self.current_token()['type'] == 'LINEBREAK':
                         self.advance()             
@@ -379,7 +422,13 @@ class Parser:
     def parse_print_statement(self):
         self.match('VISIBLE')
         node = Node('print_statement')
+        node.suppress_newline = False  # Default: add newline
         while self.current_token() and self.current_token()['type'] != 'LINEBREAK':
+            # Check for ! at the end (newline suppressor)
+            if self.current_token()['type'] == 'EXCLAMATION':
+                self.advance()
+                node.suppress_newline = True
+                break
             expr_node = self.parse_expression()
             if expr_node:
                 node.add_child(expr_node)
@@ -390,7 +439,9 @@ class Parser:
             elif self.current_token() and self.current_token()['type'] == 'CONCAT':
                 self.advance()  
             elif self.current_token() and self.current_token()['type'] == 'LINEBREAK':
-                break 
+                break
+            elif self.current_token() and self.current_token()['type'] == 'EXCLAMATION':
+                continue  # Will be handled at start of next iteration
             elif self.current_token() and self.current_token()['type'] in ['NUMBR Literal', 'NUMBAR Literal', 'YARN Literal', 'TROOF Literal', 'IDENTIFIER', 'SUM OF', 'DIFF OF', 'PRODUKT OF', 'QUOSHUNT OF', 'MOD OF', 'BIGGR OF', 'SMALLR OF', 'BOTH SAEM', 'DIFFRINT', 'BOTH OF', 'EITHER OF', 'WON OF', 'NOT', 'SMOOSH', 'ALL OF', 'ANY OF', 'MAEK', 'I IZ', 'TYPE Literal']:
                 continue  
             else:

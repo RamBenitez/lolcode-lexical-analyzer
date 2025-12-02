@@ -64,6 +64,7 @@ TOKEN_SPECIFICATION = [
     ('MKAY', r'MKAY'),
     ('AN', r'[Aa][Nn]'),  # Case-insensitive AN
     ('CONCAT', r'\+'),  # + for concatenation in VISIBLE
+    ('EXCLAMATION', r'!'),  # Newline suppressor in VISIBLE
 
 
     # Identifier and Miscellaneous

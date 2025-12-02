@@ -69,7 +69,15 @@ class Interpreter:
                 # convert to string for output
                 output_parts.append(self.to_yarn(value))
             output_line = "".join(output_parts)
-            self.output.append(output_line)
+            # Check if newline should be suppressed (! at end)
+            if hasattr(node, 'suppress_newline') and node.suppress_newline:
+                # Append to last output line if exists, otherwise add new
+                if self.output:
+                    self.output[-1] = self.output[-1] + output_line
+                else:
+                    self.output.append(output_line)
+            else:
+                self.output.append(output_line)
             return None
         
        #executes  the switch block
@@ -156,10 +164,12 @@ class Interpreter:
         elif node_type == 'break_statement': 
             return 'break_loop'
 
-        #O RLY? / YA RLY / NO WAI
+        #O RLY? / YA RLY / MEBBE / NO WAI
         elif node_type == 'orly_statement':
             # IT should already hold the condition
             it_value = self.symbol_table.symbols.get("IT", None)
+            executed_block = False
+            
             if self.to_troof(it_value):
                 # Execute YA RLY block
                 for child in node.children:
@@ -173,21 +183,42 @@ class Interpreter:
                                     return result
                                 if result.get('status') == 'awaiting_input':
                                     return result
+                        executed_block = True
                         break
             else:
-                # Execute NO WAI block if exists
+                # Check MEBBE blocks (else if)
                 for child in node.children:
-                    if child.type == 'no_wai':
-                        for stmt in child.children:
-                            if stmt.type == 'break':
-                                return {'type': 'break'}
-                            result = self.execute_node(stmt)
-                            if isinstance(result, dict):
-                                if result.get('type') == 'break':
-                                    return result
-                                if result.get('status') == 'awaiting_input':
-                                    return result
-                        break
+                    if child.type == 'mebbe' and not executed_block:
+                        # First child of mebbe is the condition expression
+                        mebbe_condition = self.evaluate_expression(child.children[0])
+                        if self.to_troof(mebbe_condition):
+                            # Execute statements (skip first child which is condition)
+                            for stmt in child.children[1:]:
+                                if stmt.type == 'break':
+                                    return {'type': 'break'}
+                                result = self.execute_node(stmt)
+                                if isinstance(result, dict):
+                                    if result.get('type') == 'break':
+                                        return result
+                                    if result.get('status') == 'awaiting_input':
+                                        return result
+                            executed_block = True
+                            break
+                
+                # Execute NO WAI block if exists and no block was executed
+                if not executed_block:
+                    for child in node.children:
+                        if child.type == 'no_wai':
+                            for stmt in child.children:
+                                if stmt.type == 'break':
+                                    return {'type': 'break'}
+                                result = self.execute_node(stmt)
+                                if isinstance(result, dict):
+                                    if result.get('type') == 'break':
+                                        return result
+                                    if result.get('status') == 'awaiting_input':
+                                        return result
+                            break
             return None
         
         elif node_type == 'function_def':
@@ -493,7 +524,7 @@ class Interpreter:
     def to_yarn(self, value):
         # convert value to YARN (string)
         if value is None:
-            return ""
+            return "NOOB"
         
         if isinstance(value, bool):
             return "WIN" if value else "FAIL"
